@@ -2,21 +2,17 @@ package task
 
 import (
 	"context"
+	"maa-backend/internal/model/dto"
 	"sync"
 )
 
-// Task 表示一个任务的结构
-type Task struct {
-    ID     string      `json:"id"`
-    Type   string      `json:"type"`
-    Params interface{} `json:"params,omitempty"`
-}
+// GUITask 表示一个任务的结构
 
 // sTaskManager 管理任务的结构
 type sTaskManager struct {
     sync.Mutex
     // key: user_device, value: list of tasks
-    tasks map[string][]Task
+    tasks map[string][]dto.GUITask
     // key: user_device_taskID, value: bool (executed)
     executedTasks map[string]bool
 }
@@ -24,7 +20,7 @@ type sTaskManager struct {
 // NewTaskManager 创建一个新的 TaskManager 实例
 func NewTaskManager() *sTaskManager {
     return &sTaskManager{
-        tasks:          make(map[string][]Task),
+        tasks:          make(map[string][]dto.GUITask),
         executedTasks: make(map[string]bool),
     }
 }
@@ -41,7 +37,7 @@ func (tm *sTaskManager) Run(ctx context.Context) error {
 var TaskManagerInstance = NewTaskManager()
 
 // AddTask 为特定用户和设备添加任务
-func (tm *sTaskManager) AddTask(user, device string, task Task) {
+func (tm *sTaskManager) AddTask(user, device string, task dto.GUITask) {
     tm.Lock()
     defer tm.Unlock()
     key := user + "_" + device
@@ -49,12 +45,12 @@ func (tm *sTaskManager) AddTask(user, device string, task Task) {
 }
 
 // GetPendingTasks 获取未执行的任务
-func (tm *sTaskManager) GetPendingTasks(user, device string) []Task {
+func (tm *sTaskManager) GetPendingTasks(user, device string) []dto.GUITask {
     tm.Lock()
     defer tm.Unlock()
     key := user + "_" + device
     allTasks := tm.tasks[key]
-    var pending []Task
+    var pending []dto.GUITask
     for _, task := range allTasks {
         execKey := key + "_" + task.ID
         if !tm.executedTasks[execKey] {
@@ -79,7 +75,7 @@ func InitializeSampleTasks() {
     user := "ea6c39eb-a45f-4d82-9ecc-33a7bf2ae4dc"
     device := "f7cd9682-3de9-4eef-9137-ec124ea9e9ec"
     // 生成一些示例任务
-    tasks := []Task{
+    tasks := []dto.GUITask{
         {ID: "task1", Type: "CaptureImage"},
         {ID: "task2", Type: "LinkStart"},
         {ID: "task3", Type: "LinkStart-Recruiting"},

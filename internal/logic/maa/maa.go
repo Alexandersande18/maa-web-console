@@ -2,12 +2,16 @@ package maa
 
 import (
 	// "MaaAssistantArknights/conf"
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"sync"
 	"syscall"
+	"unsafe"
 
+	"github.com/gogf/gf/v2/frame/g"
+	dto "maa-backend/internal/model/dto"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,6 +28,7 @@ var (
 	ErrorAsstStop          = errors.New("AsstStop failed")
 	ErrorAsstRunning       = errors.New("AsstRunning failed")
 	ErrorAsstDestroy       = errors.New("AsstDestroy failed")
+	ErrTooLargeAllocation = errors.New("buffer allocation exceeds maximum limit")
 )
 
 type AsstCallback func(message int, details uintptr, arg uintptr) uintptr
@@ -69,7 +74,7 @@ func (m *Maa) initasst() (err error) {
 	if err != nil {
 		return
 	}
-	err = m.AsstConnect(cfg.ADBPath, cfg.ADBAddress, cfg.ADBType)
+	err = m.AsstConnect(cfg.ADBPath, cfg.ADBAddress, cfg.ADBType, cfg.UserDir)
 	if err != nil {
 		return
 	}
@@ -147,7 +152,7 @@ func (m *Maa) AsstCreate() error {
 	return nil
 }
 
-func (m *Maa) AsstConnect(path string, address string, config string) error {
+func (m *Maa) AsstConnect(path string, address string, config string, usrdir string) error {
 	fmt.Println("adb start connect")
 	a1, err := UintPtrFromString(path)
 	if err != nil {
@@ -161,6 +166,15 @@ func (m *Maa) AsstConnect(path string, address string, config string) error {
 	if err != nil {
 		return err
 	}
+	a4, err := UintPtrFromString(usrdir)
+	if err != nil {
+		return err
+	}
+	r0, _, err := asstSetUserDir(m.asstHandle, a4)
+	log.WithFields(log.Fields{
+		"r0":  r0,
+		"err": err,
+	}).Println("AsstSetUserDir")
 	r1, _, err := asstConnect(m.asstHandle, a1, a2, a3)
 	log.WithFields(log.Fields{
 		"r1":  r1,
@@ -195,11 +209,12 @@ func (m *Maa) GetVersion() string {
 	return m.version
 }
 
-func (m *Maa) AsstAppendTask(typ TaskType, task Tasker) (TaskID, error) {
+func (m *Maa) AsstAppendTask(typ dto.TaskType, task dto.Tasker) (dto.TaskID, error) {
 	a1, err := UintPtrFromString(typ.String())
 	if err != nil {
 		return 0, err
 	}
+	
 	a2, err := UintPtrFromString(task.Serialize())
 	if err != nil {
 		return 0, err
@@ -212,10 +227,11 @@ func (m *Maa) AsstAppendTask(typ TaskType, task Tasker) (TaskID, error) {
 	if r1 == 0 {
 		return 0, ErrorAsstAppendTask
 	}
-	return TaskID(r1), nil
+
+	return dto.TaskID(r1), nil
 }
 
-func (m *Maa) AsstSetTaskParams(taskID TaskID, task Tasker) bool {
+func (m *Maa) AsstSetTaskParams(taskID dto.TaskID, task dto.Tasker) bool {
 	a1 := uintptr(taskID)
 	a2, err := UintPtrFromString(task.Serialize())
 	if err != nil {
@@ -268,4 +284,65 @@ func (m *Maa) AsstDestroy() error {
 		return ErrorAsstDestroy
 	}
 	return nil
+}
+
+
+func (m *Maa) GetImage() ([]byte, error) {
+    const (
+        initialBufferSize = 2 * 1920 * 1080 * 4
+        maxBufferSize     = 10 * initialBufferSize
+    )
+    
+    buffSize := initialBufferSize
+    
+    for {
+        if buffSize > maxBufferSize {
+            return nil, ErrTooLargeAllocation
+        }
+        
+        buffer := make([]byte, buffSize)
+        bufferPtr := unsafe.Pointer(&buffer[0])
+        
+        actualSize, _, err := asstGetImage(
+            m.asstHandle,
+            uintptr(bufferPtr),
+            uintptr(buffSize),
+        )
+        g.Log().Debugf(context.TODO(), "AsstGetImage attempt: buffSize: %d, actualSize: %d, error: %v", buffSize, actualSize, err)
+        
+        // 处理可能的系统错误
+        if err != nil && !errors.Is(err, syscall.Errno(0)) {
+            return nil, fmt.Errorf("system error: %w", err)
+        }
+        
+        // 假设返回0表示缓冲区不足
+        if actualSize == 0 {
+            buffSize *= 2
+            continue
+        }
+        
+        // 返回有效数据（自动截断多余容量）
+        return buffer[:actualSize], nil
+    }
+}
+
+
+func (m *Maa) GetTasksList() ([]dto.TaskID, error) {
+    // 第一次调用获取任务数量
+    requiredSize, _, err := asstGetTasksList(m.asstHandle, 0, 0)
+    if requiredSize == 0 {
+        return nil, fmt.Errorf("failed to get tasks count: %v", err)
+    }
+
+    // 分配任务ID数组
+    tasks := make([]dto.TaskID, requiredSize)
+    tasksPtr := uintptr(unsafe.Pointer(&tasks[0]))
+
+    // 第二次调用获取实际任务列表
+    actualSize, _, err := asstGetTasksList(m.asstHandle, tasksPtr, uintptr(requiredSize))
+    if actualSize == 0 {
+        return nil, fmt.Errorf("failed to get tasks list: %v", err)
+    }
+
+    return tasks[:actualSize], nil
 }

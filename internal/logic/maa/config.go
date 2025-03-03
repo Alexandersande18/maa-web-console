@@ -8,7 +8,7 @@ import (
 
 type Config struct {
 	HTTP *HTTP	`yaml:"http"`
-	Asst *Asst	`yaml:"asst"`
+	Asst []*Asst	`yaml:"asst"`
 }
 
 type HTTP struct {
@@ -17,10 +17,12 @@ type HTTP struct {
 }
 
 type Asst struct {
-	ADBAddress   string	`yaml:"adb_address"`
-	ADBPath      string	`yaml:"adb_path"`
-	ADBType      string	`yaml:"adb_type"`
-	ResourcePath string	`yaml:"resource_path"`
+	ID           string	`yaml:"id"`
+	ADBAddress   string	`yaml:"adbaddress"`
+	ADBPath      string	`yaml:"adbpath"`
+	ADBType      string	`yaml:"adbtype"`
+	ResourcePath string	`yaml:"resourcepath"`
+	UserDir	  		string	`yaml:"userdir"`
 }
 
 func LoadConfig() (*Config, error) {
