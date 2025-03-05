@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gogf/gf/v2 v2.7.1
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/sys v0.20.0
 )

@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MAASST 控制面板</title>
+    <style>
+      /* 通用样式 */
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #f2f2f2;
+        color: #333;
+      }
+      h2, h3 {
+        text-align: left;
+      }
+      button {
+        padding: 10px 15px;
+        margin: 5px;
+        border: none;
+        background-color: #007BFF;
+        color: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      input, textarea, select {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        margin-top: 5px;
+        margin-bottom: 10px;
+      }
+      /* 登录页样式 */
+      #login-page {
+        max-width: 500px;
+        margin: 50px auto;
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 6px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+      #login-message {
+        color: red;
+        text-align: center;
+      }
+      /* 主页面样式 */
+      #main-page {
+        max-width: 700px;
+        margin: 20px auto;
+        padding: 10px;
+      }
+      /* Header 样式：类似手机 App 头部 */
+      .header {
+        position: sticky;
+        top: 0;
+        background-color: #fff;
+        z-index: 1000;
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 1.5em; /* h2 大小 */
+      }
+      /* 登出按钮样式：右侧显示 */
+      #logout-button {
+        position: absolute;
+        right: 10px;
+        background-color: #dc3545;
+        padding: 10px 15px;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #logout-button:hover {
+        background-color: #c82333;
+      }
+      /* Box样式，用于区分板块 */
+      .box {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      /* 任务配置区域 */
+      #task-configurations {
+        margin: 10px 0;
+      }
+      .task-item {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        cursor: pointer;
+        transition: background-color 0.3s, border-color 0.3s;
+        overflow: hidden;
+      }
+      .task-item:hover {
+        background-color: #f9f9f9;
+      }
+      .task-item > span {
+        font-weight: bold;
+        display: inline-block;
+      }
+      .task-item > .config-button {
+        float: right;
+      }
+      .task-item .config-summary {
+        clear: both;
+        margin-top: 10px;
+        font-size: 12px;
+        color: #666;
+        word-break: break-all;
+      }
+      /* 被选中时的高亮效果 */
+      .task-item.selected {
+        background-color: #e6f7ff;
+        border-color: #1890ff;
+      }
+      /* 截图展示 */
+      #screenshot-display {
+        text-align: center;
+        margin-top: 10px;
+      }
+      /* Modal 样式 */
+      .modal {
+        display: none; /* 默认隐藏 */
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+      }
+      .modal-content {
+        background-color: #fefefe;
+        margin: 10% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 6px;
+      }
+      .modal-close {
+        color: #aaa;
+        float: right;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .modal-close:hover,
+      .modal-close:focus {
+        color: black;
+        text-decoration: none;
+      }
+      /* 添加以下复选框布局样式 */
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .checkbox-group label {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+      input[type="checkbox"] {
+        margin: 0;
+        width: auto;
+        flex-shrink: 0;
+      }
+      /* 调整原有模态框样式 */
+      .modal-content {
+        padding: 20px 15px;
+      }
+      /* 调整表单元素样式 */
+      #modal-body > div {
+        margin-bottom: 12px;
+      }
+      /* 针对布尔类型字段的特殊处理 */
+      .boolean-field {
+        margin-left: 0;
+      }
+      /* 日志显示区域样式 */
+      #log-container {
+        border: 1px solid #ccc;
+        background: #fff;
+        height: 200px;
+        margin: 15px 0;
+        padding: 5px;
+        overflow-y: auto;
+      }
+      #log-output {
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      /* 新增日志条目样式 */
+      .log-entry {
+        padding: 2px 4px;
+        margin: 2px 0;
+        border-radius: 3px;
+      }
+      .log-level-debug {
+        color: #999;
+      }
+      .log-level-info {
+        color: #28a745;
+      }
+      .log-level-warning,
+      .log-level-warn {
+        color: #ffc107;
+      }
+      .log-level-error {
+        color: #dc3545;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🉑🍬🉑🧂</h1>
+      <!-- 初始状态隐藏登出按钮 -->
+      <button id="logout-button" style="display: none;">登出</button>
+    </div>
+  
+    <!-- 登录页面 -->
+    <div id="login-page">
+      <h2>登录</h2>
+      <input type="text" id="login-token" placeholder="请输入 token">
+      <button id="login-button">登录</button>
+      <div id="login-message"></div>
+    </div>
+  
+    <!-- 主页面 -->
+    <div id="main-page" style="display:none;">
+      
+      <!-- 任务配置板块 -->
+      <h2>任务配置</h2>
+      <div class="box" id="task-config-box">
+        <div id="task-configurations">
+          <!-- taskRecruit: 自动公招 -->
+          <div class="task-item" data-task="taskRecruit">
+            <span>自动公招</span>
+            <button class="config-button">配置</button>
+            <div class="config-summary"></div>
+          </div>
+          <!-- taskInfrast: 基建换班 -->
+          <div class="task-item" data-task="taskInfrast">
+            <span>基建换班</span>
+            <button class="config-button">配置</button>
+            <div class="config-summary"></div>
+          </div>
+          <!-- taskFight: 刷理智 -->
+          <div class="task-item" data-task="taskFight">
+            <span>刷理智</span>
+            <button class="config-button">配置</button>
+            <div class="config-summary"></div>
+          </div>
+          <!-- taskMall: 信用商店购物 -->
+          <div class="task-item" data-task="taskMall">
+            <span>信用商店购物</span>
+            <button class="config-button">配置</button>
+            <div class="config-summary"></div>
+          </div>
+          <!-- taskAward: 领取奖励 -->
+          <div class="task-item" data-task="taskAward">
+            <span>领取奖励</span>
+            <button class="config-button">配置</button>
+            <div class="config-summary"></div>
+          </div>
+        </div>
+        <div style="text-align:center;">
+          <button id="linkstart-button" style="background-color:#35dca5;">开始任务</button>
+          <!-- 红色停止任务按钮 -->
+          <button id="stoptask-button" style="background-color:#dc3545;">停止任务</button>
+        </div>
+      </div>
+  
+      <!-- 日志板块 -->
+      <h2>日志</h2>
+      <div class="box" id="log-box">
+        <div id="log-container">
+          <div id="log-output"></div>
+        </div>
+        <div style="text-align:right;">
+          <button id="clear-log-button">清空日志</button>
+        </div>
+      </div>
+  
+      <!-- 截图展示板块 -->
+      <h2>截图展示</h2>
+      <div class="box" id="screenshot-box">
+        <div style="text-align:center;">
+          <button id="screenshot-button">截图</button>
+        </div>
+        <div id="screenshot-display">
+          <img id="screenshot-img" src="" alt="截图内容" style="max-width:100%; display:none;">
+        </div>
+      </div>
+    </div>
+  
+    <!-- 参数配置 Modal -->
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <span id="modal-close" class="modal-close">&times;</span>
+        <h3 id="modal-title">配置参数</h3>
+        <div id="modal-body">
+          <!-- 动态生成表单 -->
+        </div>
+        <button id="modal-save">保存</button>
+      </div>
+    </div>
+    
+  <script>
+    // 全局保存 JWT token
+    let jwtToken = "";
+    let logStreamActive = false;
+
+    // 默认任务配置
+    let taskConfigs = {
+      taskRecruit: {
+         refresh: false,
+         select: "3",
+         confirm: "",
+         first_tags: "",
+         extra_tags_mode: 0,
+         times: 4,
+         set_time: true,
+         expedite: false,
+         expedite_times: 0,
+         skip_robot: true,
+         recruitment_time: '{"3":540,"4":540,"5":540,"6":540}',
+         report_to_penguin: false,
+         penguin_id: "",
+         report_to_yituliu: false,
+         yituliu_id: "",
+         server: "CN"
+      },
+      taskInfrast: {
+        mode: 0,
+        facility: "Mfg,Trade,Power,Control,Reception,Office,Dorm", 
+        drones: "Money",
+        threshold: 0.3,
+        replenish: false,
+        dorm_notstationed_enabled: false,
+        dorm_trust_enabled: false,
+        filename: "",
+        plan_index: 0
+      },
+      taskFight: {
+        stage: "",
+        medicine: 0,
+        expiring_medicine: 0,
+        stone: 0,
+        times: 2147483647,
+        series: 1,
+        drops: "{}",
+        report_to_penguin: false,
+        penguin_id: "",
+        server: "CN",
+        client_type: "Official",
+        DrGrandet: false
+      },
+      taskMall: {
+        shopping: true,
+        visit_friends: true,
+        buy_first: "",
+        blacklist: "",
+        force_shopping_if_credit_full: true,
+        only_buy_discount: false,
+        reserve_max_credit: false
+      },
+      taskAward: {
+        award: true,
+        mail: true,
+        recruit: true,
+        orundum: true,
+        mining: true,
+        specialaccess: true
+      }
+    };
+
+    // 字段中文映射及配置
+    const fieldConfig = {
+      taskRecruit: {
+        refresh: { label: "刷新三星标签" },
+        select: { label: "点击标签等级", hint: "多个标签用逗号分隔，例如:3,4" },
+        confirm: { label: "确认标签等级", hint: "多个标签用逗号分隔" },
+        first_tags: { label: "首选标签", hint: "仅在标签等级为3时有效，多个标签用逗号分隔" },
+        extra_tags_mode: { label: "额外标签模式", type: "select", options: {"0": "默认行为（0）", "1": "选3个标签（1）", "2": "组合高星标签（2）"} },
+        times: { label: "招募次数", hint: "0表示仅公招计算" },
+        set_time: { label: "设置招募时间" },
+        expedite: { label: "使用加急许可" },
+        expedite_times: { label: "加急次数", hint: "仅在使用加急许可时有效" },
+        skip_robot: { label: "跳过机器人标签" },
+        recruitment_time: { label: "招募时限（分钟）", hint: "JSON 格式，例如: {\"3\":540, \"4\":540, \"5\":540, \"6\":540}" },
+        report_to_penguin: { label: "汇报企鹅物流数据" },
+        penguin_id: { label: "企鹅物流数据ID" },
+        report_to_yituliu: { label: "汇报一图流数据" },
+        yituliu_id: { label: "一图流数据ID" },
+        server: { label: "服务器", type: "select", options: {"CN": "国服","US": "美服","JP": "日服","KR": "韩服"} }
+      },
+      taskInfrast: {
+        mode: { label: "模式", type: "select", options: {"0":"智能换班（0）","10000":"自定义方案（10000）"} },
+        facility: { label: "换班设施", hint: "逗号分隔，例如：Mfg,Trade" },
+        drones: { label: "无人机用途", type: "select", options: {"_NotUse":"不使用","Money":"龙门币","SyntheticJade":"合成玉"} },
+        threshold: { label: "心情阈值" },
+        replenish: { label: "贸易站补货" },
+        dorm_notstationed_enabled: { label: "启用未进驻" },
+        dorm_trust_enabled: { label: "填入信赖未满" },
+        filename: { label: "配置文件路径" },
+        plan_index: { label: "方案序号" }
+      },
+      taskFight: {
+        stage: { label: "关卡名称" },
+        medicine: { label: "最大使用理智药数量" },
+        expiring_medicine: { label: "最大使用临期理智药数量" },
+        stone: { label: "最大吃源石数量" },
+        times: { label: "执行次数", hint: "2147483647表示无限，刷到理智不够" },
+        series: { label: "连战次数" },
+        drops: { label: "掉落限制", hint: "JSON格式，例如：{\"30011\":5}" },
+        report_to_penguin: { label: "上报企鹅物流" },
+        penguin_id: { label: "企鹅物流ID" },
+        server: { label: "服务器", type: "select", options: {"CN":"国服","US":"美服","JP":"日服","KR":"韩服"} },
+        client_type: { label: "客户端", type: "select", options: {"Official":"官服","Bilibili":"B服","txwy":"渠道服"} },
+        DrGrandet: { label: "智能碎石" }
+      },
+      taskMall: {
+        shopping: { label: "执行购物" },
+        visit_friends: { label: "访问好友" },
+        buy_first: { label: "优先购买", hint: "逗号分隔商品" },
+        blacklist: { label: "黑名单", hint: "逗号分隔商品" },
+        force_shopping_if_credit_full: { label: "信用溢出购买" },
+        only_buy_discount: { label: "仅购折扣" },
+        reserve_max_credit: { label: "保留信用" }
+      },
+      taskAward: {
+        award: { label: "任务奖励" },
+        mail: { label: "邮件奖励" },
+        recruit: { label: "公招奖励" },
+        orundum: { label: "合成玉" },
+        mining: { label: "开采许可" },
+        specialaccess: { label: "月卡奖励" }
+      }
+    };
+
+    // 页面切换函数
+    function showLoginPage(){
+      document.getElementById("login-page").style.display = "block";
+      document.getElementById("main-page").style.display = "none";
+      // 仅在登录页时隐藏登出按钮
+      document.getElementById("logout-button").style.display = "none";
+    }
+    function showMainPage(){
+      document.getElementById("login-page").style.display = "none";
+      document.getElementById("main-page").style.display = "block";
+      // 主页面显示时显示登出按钮
+      document.getElementById("logout-button").style.display = "block";
+      // 开始日志流连接（确保只启动一次）
+      if (!logStreamActive) {
+        startLogStream();
+      }
+    }
+
+    // 登录按钮事件
+    document.getElementById("login-button").addEventListener("click", async function(){
+      const tokenInput = document.getElementById("login-token").value.trim();
+      if(!tokenInput){
+        document.getElementById("login-message").textContent = "请输入 token";
+        return;
+      }
+      try {
+        const response = await fetch('/maasst/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Token: tokenInput })
+        });
+        const result = await response.json();
+        if(result && result.data && result.data.token){
+          jwtToken = result.data.token;
+          showMainPage();
+        } else {
+          document.getElementById("login-message").textContent = "登录失败，请检查 token";
+        }
+      } catch(e) {
+        document.getElementById("login-message").textContent = "请求出错：" + e;
+      }
+    });
+
+    // 登出按钮事件
+    document.getElementById("logout-button").addEventListener("click", function(){
+      jwtToken = "";
+      location.reload();
+      showLoginPage();
+    });
+
+    // Linkstart 按钮事件
+    document.getElementById("linkstart-button").addEventListener("click", async function(){
+      const body = {};
+      // 遍历每个任务项，如果选中则将配置加入请求体
+      document.querySelectorAll(".task-item").forEach(item => {
+        const taskName = item.getAttribute("data-task");
+        if(item.classList.contains("selected")){
+          // 复制对应任务的配置
+          const config = Object.assign({}, taskConfigs[taskName]);
+          if(taskName === "taskInfrast"){
+            // facility 字符串转换为数组
+            config.facility = config.facility.split(',').map(s => s.trim()).filter(s => s);
+          }
+          if(taskName === "taskFight"){
+            try {
+              config.drops = JSON.parse(config.drops);
+            } catch(e) {
+              config.drops = {};
+            }
+          }
+          if(taskName === "taskMall"){
+            config.buy_first = config.buy_first.split(',').map(s => s.trim()).filter(s => s);
+            config.blacklist = config.blacklist.split(',').map(s => s.trim()).filter(s => s);
+          }
+          if(taskName === "taskRecruit"){
+            // 将逗号分隔的字符串转换为数组
+            config.select = config.select.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            config.confirm = config.confirm.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            config.first_tags = config.first_tags.split(',').map(s => s.trim()).filter(s => s);
+            try {
+              config.recruitment_time = JSON.parse(config.recruitment_time);
+            } catch(e) {
+              config.recruitment_time = {"3":540, "4":540, "5":540, "6":540};
+            }
+          }
+          config.enable = true;
+          body[taskName] = config;
+        }
+      });
+      try {
+        const response = await fetch('/maasst/linkstart', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': jwtToken
+          },
+          body: JSON.stringify(body)
+        });
+  
+        if (!response.ok) {
+          let errorMsg = `请求失败，HTTP 状态码：${response.status}`;
+          try {
+            const errorResult = await response.json();
+            errorMsg += ` - ${errorResult.message || '未知错误'}`;
+          } catch {
+            errorMsg += ` - ${response.statusText}`;
+          }
+          alert(errorMsg);
+          return;
+        }
+  
+        const result = await response.json();
+        if (result.code === 0) {
+          alert("Linkstart 启动成功");
+        } else {
+          alert(`操作失败：${result.message || '未知业务错误'}`);
+        }
+      } catch (e) {
+        alert("请求异常：" + e.message);
+      }
+    });
+
+    // 停止任务按钮事件（参照 Linkstart 的方式实现）
+    document.getElementById("stoptask-button").addEventListener("click", async function(){
+      const body = {};
+      // 遍历每个任务项，如果选中则将配置加入请求体
+      document.querySelectorAll(".task-item").forEach(item => {
+        const taskName = item.getAttribute("data-task");
+        if(item.classList.contains("selected")){
+          const config = Object.assign({}, taskConfigs[taskName]);
+          if(taskName === "taskInfrast"){
+            config.facility = config.facility.split(',').map(s => s.trim()).filter(s => s);
+          }
+          if(taskName === "taskFight"){
+            try {
+              config.drops = JSON.parse(config.drops);
+            } catch(e) {
+              config.drops = {};
+            }
+          }
+          if(taskName === "taskMall"){
+            config.buy_first = config.buy_first.split(',').map(s => s.trim()).filter(s => s);
+            config.blacklist = config.blacklist.split(',').map(s => s.trim()).filter(s => s);
+          }
+          if(taskName === "taskRecruit"){
+            config.select = config.select.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            config.confirm = config.confirm.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            config.first_tags = config.first_tags.split(',').map(s => s.trim()).filter(s => s);
+            try {
+              config.recruitment_time = JSON.parse(config.recruitment_time);
+            } catch(e) {
+              config.recruitment_time = {"3":540, "4":540, "5":540, "6":540};
+            }
+          }
+          // 停止任务时将 enable 置为 false
+          config.enable = false;
+          body[taskName] = config;
+        }
+      });
+      try {
+        const response = await fetch('/maasst/stoptask', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': jwtToken
+          },
+          body: JSON.stringify(body)
+        });
+  
+        if (!response.ok) {
+          let errorMsg = `请求失败，HTTP 状态码：${response.status}`;
+          try {
+            const errorResult = await response.json();
+            errorMsg += ` - ${errorResult.message || '未知错误'}`;
+          } catch {
+            errorMsg += ` - ${response.statusText}`;
+          }
+          alert(errorMsg);
+          return;
+        }
+  
+        const result = await response.json();
+        if (result.code === 0) {
+          alert("停止任务成功");
+        } else {
+          alert(`停止任务失败：${result.message || '未知错误'}`);
+        }
+      } catch (e) {
+        alert("请求异常：" + e.message);
+      }
+    });
+    
+    // 截图按钮事件
+    document.getElementById("screenshot-button").addEventListener("click", async function(){
+      try {
+        const response = await fetch('/maasst/screenshot', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': jwtToken
+          },
+          body: JSON.stringify({})
+        });
+        const result = await response.json();
+        if(result && result.data && result.data.imageData){
+          const imgElement = document.getElementById("screenshot-img");
+          imgElement.src = "data:image/png;base64," + result.data.imageData;
+          imgElement.style.display = "block";
+        } else {
+          alert("截图失败");
+        }
+      } catch(e) {
+        alert("截图请求出错：" + e);
+      }
+    });
+
+    // 模态框处理
+    const modal = document.getElementById("modal");
+    const modalClose = document.getElementById("modal-close");
+    const modalSave = document.getElementById("modal-save");
+    const modalBody = document.getElementById("modal-body");
+    const modalTitle = document.getElementById("modal-title");
+    let currentTask = "";
+
+    // 当点击各任务的配置按钮时
+    document.querySelectorAll(".config-button").forEach(button => {
+      button.addEventListener("click", function(event){
+        event.stopPropagation();
+        const taskItem = this.closest(".task-item");
+        currentTask = taskItem.getAttribute("data-task");
+        openConfigModal(currentTask);
+      });
+    });
+
+    modalClose.addEventListener("click", function(){
+      closeModal();
+    });
+
+    modalSave.addEventListener("click", function(){
+      // 将 modal 内所有 input/select/textarea 的值保存到对应任务配置中
+      const inputs = modalBody.querySelectorAll("input, select, textarea");
+      inputs.forEach(input => {
+        const key = input.name;
+        let value = input.value;
+        if(input.type === "checkbox"){
+          value = input.checked;
+        } else if(input.type === "number"){
+          value = Number(value);
+        }
+        taskConfigs[currentTask][key] = value;
+      });
+      const taskItem = document.querySelector(`.task-item[data-task="${currentTask}"]`);
+      taskItem.querySelector(".config-summary").textContent = JSON.stringify(taskConfigs[currentTask]);
+      closeModal();
+    });
+
+    function openConfigModal(task) {
+      modalTitle.textContent = "配置 " + document.querySelector(`[data-task="${task}"] span`).textContent;
+      modalBody.innerHTML = "";
+      const config = taskConfigs[task];
+      const fields = fieldConfig[task];
+  
+      for (let key in config) {
+        if(key === "enable") continue;
+  
+        const field = fields[key] || {};
+        // 新建一个 div 用于非布尔类型情况（布尔类型单独处理）
+        const div = document.createElement("div");
+        div.style.marginBottom = "15px";
+  
+        const label = document.createElement("label");
+        label.textContent = (field.label || key) + ":";
+        if(field.hint) {
+          label.title = field.hint;
+          label.style.borderBottom = "1px dotted #666";
+        }
+        label.style.display = "block";
+        label.style.marginBottom = "5px";
+  
+        let input;
+        const value = config[key];
+        const fieldType = field.type || typeof value;
+  
+        if (fieldType === "boolean") {
+          // 对布尔类型使用与其他字段一致的包装方式
+          const divBoolean = document.createElement("div");
+          divBoolean.style.marginBottom = "15px";
+  
+          input = document.createElement("input");
+          input.type = "checkbox";
+          input.name = key; // 添加 name 属性，确保保存时能取到值
+          input.checked = value;
+          input.style.marginRight = "8px";
+  
+          const newLabel = document.createElement("label");
+          newLabel.appendChild(input);
+          newLabel.appendChild(document.createTextNode(field.label || key));
+          if(field.hint) {
+            newLabel.title = field.hint;
+            newLabel.style.borderBottom = "1px dotted #666";
+          }
+  
+          divBoolean.appendChild(newLabel);
+          modalBody.appendChild(divBoolean);
+          continue;
+        } else if (field.options) {
+            input = document.createElement("select");
+            Object.entries(field.options).forEach(([optValue, optText]) => {
+              const option = document.createElement("option");
+              option.value = optValue;
+              option.textContent = optText;
+              if(optValue === value) option.selected = true;
+              input.appendChild(option);
+            });
+          } else if (fieldType === "number") {
+            input = document.createElement("input");
+            input.type = "number";
+            input.value = value;
+          } else if (["facility", "buy_first", "blacklist", "select", "confirm", "first_tags"].includes(key)) {
+            input = document.createElement("textarea");
+            if(Array.isArray(value)){
+                input.value = value.join(', ');
+            } else {
+                input.value = value;
+            }
+            input.rows = 2;
+          } else if (["drops", "recruitment_time"].includes(key)) {
+            input = document.createElement("textarea");
+            if(typeof value === "object"){
+                input.value = JSON.stringify(value, null, 2);
+            } else {
+                input.value = value;
+            }
+            input.rows = 4;
+          } else {
+            input = document.createElement("input");
+            input.type = "text";
+            input.value = value;
+          }
+  
+          input.name = key;
+          input.style.width = "100%";
+          input.style.padding = "6px";
+          div.appendChild(label);
+          div.appendChild(input);
+  
+          if(field.hint) {
+            const hint = document.createElement("div");
+            hint.textContent = field.hint;
+            hint.style.color = "#666";
+            hint.style.fontSize = "0.8em";
+            div.appendChild(hint);
+          }
+  
+          modalBody.appendChild(div);
+      }
+      modal.style.display = "block";
+    }
+  
+    function closeModal() {
+      modal.style.display = "none";
+    }
+    
+    // 为任务项添加点击事件，点击除配置按钮外的区域切换选中状态
+    document.querySelectorAll(".task-item").forEach(item => {
+      item.addEventListener("click", function(event) {
+        if(event.target.closest(".config-button")) return;
+        this.classList.toggle("selected");
+      });
+    });
+
+    // ---------------------------
+    // 日志滚动显示功能（基于 SSE 流处理）
+    async function startLogStream() {
+      logStreamActive = true;
+      try {
+        const response = await fetch('/maasst/logs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': jwtToken
+          },
+          body: JSON.stringify({}) // 若需要传递参数，可在此处添加
+        });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+  
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+  
+          let parts = buffer.split("\n\n");
+          buffer = parts.pop();
+  
+          parts.forEach(part => {
+            if(!part.trim()) return;
+            // 解析 SSE 消息块：检查是否为心跳事件
+            const lines = part.split("\n");
+            const isHeartbeat = lines.some(line => line.startsWith("event: heartbeat"));
+            if(isHeartbeat) return;
+  
+            let dataLine = lines.find(line => line.startsWith("data:"));
+            if(dataLine) {
+              let logMessage = dataLine.substring(5).trim();
+              try {
+                let json = JSON.parse(logMessage);
+                // 只显示时间和 message
+                const timestamp = json.timestamp ? parseInt(json.timestamp) : Date.now();
+                const time = new Date(timestamp).toLocaleTimeString('zh-CN', {
+                  hour12: false,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                });
+                let message = `[${time}] ${json.message}`;
+                appendLog(message, json.level);
+              } catch (err) {
+                // 若解析 JSON 失败，则原样显示
+                appendLog(logMessage);
+              }
+            }
+          });
+        }
+      } catch (error) {
+        appendLog("日志连接出错：" + error);
+      }
+    }
+  
+    function appendLog(text, level) {
+      const logOutput = document.getElementById("log-output");
+      const entry = document.createElement("div");
+      entry.classList.add("log-entry");
+      if(level) {
+        switch(level.toLowerCase()){
+          case "debug":
+            entry.classList.add("log-level-debug");
+            break;
+          case "info":
+            entry.classList.add("log-level-info");
+            break;
+          case "warning":
+          case "warn":
+            entry.classList.add("log-level-warning");
+            break;
+          case "error":
+            entry.classList.add("log-level-error");
+            break;
+          default:
+            break;
+        }
+      }
+      entry.textContent = text;
+      logOutput.appendChild(entry);
+      // 限制日志条数，超过 300 条则删除最旧的一条
+      if(logOutput.children.length > 300) {
+        logOutput.removeChild(logOutput.firstChild);
+      }
+      // 自动滚动到底部
+      const container = document.getElementById("log-container");
+      container.scrollTop = container.scrollHeight;
+    }
+    // ---------------------------
+
+    // 清空日志事件
+    document.getElementById("clear-log-button").addEventListener("click", function(){
+      document.getElementById("log-output").innerHTML = "";
+    });
+  </script>
+
+</body>
+</html>

@@ -8,10 +8,12 @@ import (
 	"os"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
-	"github.com/gogf/gf/v2/frame/g"
 	dto "maa-backend/internal/model/dto"
+
+	"github.com/gogf/gf/v2/frame/g"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -39,6 +41,7 @@ type Maa struct {
 	hooks      []Hook
 	mu         sync.Mutex
 	cfg        *Asst
+	SSEClients    map[string]*dto.SSEClientConn
 }
 
 func New(cfg *Asst) (maa *Maa, err error) {
@@ -51,6 +54,7 @@ func New(cfg *Asst) (maa *Maa, err error) {
 	maa = &Maa{
 		hooks: make([]Hook, 0),
 		cfg:   cfg,
+		SSEClients:  make(map[string]*dto.SSEClientConn), // 确保map初始化
 	}
 	err = maa.initasst()
 	if err != nil {
@@ -188,7 +192,9 @@ func (m *Maa) AsstConnect(path string, address string, config string, usrdir str
 }
 
 func (m *Maa) setDefaultHook() {
-	m.hooks = append(m.hooks, &sampleHook{})
+	m.hooks = append(m.hooks, &TaskCallback{
+		Instance: m,
+	})
 }
 
 func (m *Maa) SetVersion() {
@@ -246,23 +252,23 @@ func (m *Maa) AsstSetTaskParams(taskID dto.TaskID, task dto.Tasker) bool {
 	return r1 > 0
 }
 
-func (m *Maa) AsstStart() bool {
+func (m *Maa) AsstStart() (bool, error) {
 	r1, _, err := asstStart(m.asstHandle)
 	log.WithFields(log.Fields{
 		"r1":  r1,
 		"err": err,
 	}).Println("AsstStart")
-	return r1 > 0
+	return r1 > 0, err
 }
 
-func (m *Maa) AsstStop() bool {
+func (m *Maa) AsstStop() (bool, error) {
 	r1, _, err := asstStop(m.asstHandle)
 	log.WithFields(log.Fields{
 		"r1":  r1,
 		"err": err,
 	}).Println("AsstStop")
 
-	return r1 > 0
+	return r1 > 0, err
 }
 
 func (m *Maa) AsstRunning() bool {
@@ -346,3 +352,58 @@ func (m *Maa) GetTasksList() ([]dto.TaskID, error) {
 
     return tasks[:actualSize], nil
 }
+
+func (m *Maa) NewClient(id string) {
+	ch := make(chan dto.Maalog, 10)
+	conn := &dto.SSEClientConn{
+		Ch:        ch,
+		CreatedAt: time.Now(),
+	}
+	m.SSEClients[id] = conn
+	firstMsg := dto.Maalog{
+		Level:    "warn",
+		Timestamp: time.Now().Unix(),
+	}
+	if m.AsstRunning(){
+		firstMsg.Message = "当前有正在运行的任务"
+	} else {
+		firstMsg.Message = "没有正在运行的任务"
+	}
+	conn.Ch <- firstMsg
+}
+
+func (m *Maa) GetClient(id string) *dto.SSEClientConn {
+	return m.SSEClients[id]
+}
+
+func (m *Maa) DeleteClient(id string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	close(m.SSEClients[id].Ch)
+	delete(m.SSEClients, id)
+}
+
+func (m *Maa) AppendLog(maalog dto.Maalog) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+    for k, v := range m.SSEClients {
+        if v == nil {
+            g.Log().Error(context.TODO(), "Client is nil", k)
+            continue
+        }
+        // 使用闭包处理panic防止通道关闭导致崩溃
+        func() {
+            defer func() {
+                if r := recover(); r != nil {
+                    g.Log().Errorf(context.TODO(), "Send log to client %s failed: channel already closed", k)
+                }
+            }()
+            select {
+            case v.Ch <- maalog:
+            default:
+                g.Log().Errorf(context.TODO(), "Send log to client %s failed: channel full", k)
+            }
+        }()
+    }
+}
+

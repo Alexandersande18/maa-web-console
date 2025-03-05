@@ -60,6 +60,47 @@ func (s *sMaasst) LinkStart(id string, tasks []dto.Tasker) error {
         }
         g.Log().Debugf(context.TODO(), "Task %s appended with ID %d", task.GetType(), tskID)
     }
-    maa.AsstStart()
+    if ok, err := maa.AsstStart(); !ok{
+		return err
+	}
     return nil
+}
+
+func (s *sMaasst) StopTask(id string) error {
+	if !s.HasInstance(id) {
+		return fmt.Errorf("instance not found")
+	}
+	maa := s.getInstance(id)
+
+	if ok, err := maa.AsstStop(); !ok{
+		return err
+	}
+	return nil
+}
+
+func (s *sMaasst) NewSSEClient(mid string, cid string) (*dto.SSEClientConn, error) {
+	if !s.HasInstance(mid) {
+        return nil, fmt.Errorf("instance not found")
+    }
+	maa := s.getInstance(mid)
+	maa.NewClient(cid)
+	
+	return s.GetSSEClient(mid, cid)
+}
+
+func (s *sMaasst) DeleteSSEClient(mid string, cid string) error {
+	if !s.HasInstance(mid) {
+		return fmt.Errorf("instance not found")
+	}
+	maa := s.getInstance(mid)
+	maa.DeleteClient(cid)
+	return nil
+}
+
+func (s *sMaasst) GetSSEClient(mid string, cid string) (*dto.SSEClientConn, error) {
+	if !s.HasInstance(mid) {
+		return nil, fmt.Errorf("instance not found")
+	}
+	maa := s.getInstance(mid)
+	return maa.GetClient(cid), nil
 }

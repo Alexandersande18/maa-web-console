@@ -14,6 +14,10 @@ type (
 		HasInstance(id string) bool
 		TakeScreenshot(id string) ([]byte, error)
 		LinkStart(id string, tasks []dto.Tasker) error
+		StopTask(id string) error
+		NewSSEClient(mid string, cid string) (*dto.SSEClientConn, error)
+		DeleteSSEClient(mid string, cid string) error
+		GetSSEClient(mid string, cid string) (*dto.SSEClientConn, error)
 	}
 )
 

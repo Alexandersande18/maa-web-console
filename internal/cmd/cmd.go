@@ -6,10 +6,8 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
-
 	"maa-backend/internal/controller/maasst"
-	"maa-backend/internal/controller/hello"
-	"maa-backend/internal/controller/maa"
+	"maa-backend/internal/middleware"
 )
 
 const (
@@ -41,37 +39,35 @@ const (
 
 
 var (
-	Main = gcmd.Command{
-		Name:  "main",
-		Usage: "main",
-		Brief: "start http server",
-		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
-			s := g.Server()
-			// s.Use(func (r *ghttp.Request) {
-			// 	r.Middleware.Next()
-			// 	if err := r.GetError(); err != nil {
-			// 		// 记录到自定义错误日志文件
-			// 		g.Log().Error(ctx, err)
-			// 		//返回固定的友好信息
-			// 		r.Response.ClearBuffer()
-			// 		r.Response.Writeln("服务器居然开小差了，请稍后再试吧！")
-			// 	}
-			// })
-			s.Group("/", func(group *ghttp.RouterGroup) {
-				group.Middleware(ghttp.MiddlewareHandlerResponse)
-				group.Bind(
-					hello.NewV1(),
-				)
-				group.Bind(
-					maa.NewV1(),
-				)
-				group.Bind(
-					maasst.NewV1(),
-				)
-			})
-			s.SetSwaggerUITemplate(MySwaggerUITemplate)
-			s.Run()
-			return nil
-		},
-	}
+    Main = gcmd.Command{
+        Name:  "main",
+        Usage: "main",
+        Brief: "start http server",
+        Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
+            s := g.Server()
+            // 设置静态文件服务
+            s.AddStaticPath("/", "resource/public/html")
+
+
+            s.Group("/", func(group *ghttp.RouterGroup) {
+                group.Middleware(ghttp.MiddlewareHandlerResponse)
+                group.Bind(maasst.NewV1().Login)
+                group.Middleware(middleware.JWTAuth)
+                group.Bind(
+                    maasst.NewV1().LinkStart,
+                    maasst.NewV1().Screenshot,
+                    maasst.NewV1().StopTask,
+                )
+            })
+            s.Group("/", func(group *ghttp.RouterGroup) {
+                group.Middleware(middleware.JWTAuth)
+                group.Bind(
+                    maasst.NewV1().Logs,
+                )
+            })
+            s.SetSwaggerUITemplate(MySwaggerUITemplate)
+            s.Run()
+            return nil
+        },
+    }
 )

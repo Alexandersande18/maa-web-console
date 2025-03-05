@@ -162,7 +162,7 @@ type TaskFight struct {
 	Medicine         int             `json:"medicine"          v:"min:0"           d:"0"                                                                     dc:"最大使用理智药数量"`
 	ExpiringMedicine int             `json:"expiring_medicine" v:"min:0"           d:"0"                                                                     dc:"最大使用临期理智药数量"`
 	Stone            int             `json:"stone"             v:"min:0"           d:"0"                                                                     dc:"最大吃石头数量"`
-	Times            int             `json:"times"             v:"min:-1"          d:"-1"                                                                    dc:"执行次数，-1表示无限"`
+	Times            int             `json:"times"             v:"min:-1"          d:"-1"                                                                    dc:"执行次数，2147483647表示无限"`
 	Series           int             `json:"series"            v:"min:1|max:6"     d:"1"                                                                     dc:"连战次数，范围1-6"`
 	Drops            map[string]int  `json:"drops"             v:""                d:""                                                                      dc:"掉落数量限制，满足任一即停"`
 	ReportToPenguin  bool            `json:"report_to_penguin" v:""                d:"false"                                                                 dc:"是否上报企鹅数据"`
@@ -224,23 +224,23 @@ func (t *TaskFight) GetType() TaskType {
 //                                 // 选项："CN" | "US" | "JP" | "KR"
 // }
 type TaskRecruit struct {
-	Enable          bool            `json:"enable"           v:"boolean"         d:"true"                                                                  dc:"是否启用本任务"`
-	Refresh         bool            `json:"refresh"          v:""                d:"false"                                                                 dc:"是否刷新三星标签"`
-	Select          []int           `json:"select"           v:"required"                                                                                  dc:"点击标签等级（必选）"`
-	Confirm         []int           `json:"confirm"          v:""                                                                                          dc:"确认标签等级"`
-	FirstTags       []string        `json:"first_tags"       v:""                d:""                                                                      dc:"首选标签"`
-	ExtraTagsMode   int             `json:"extra_tags_mode"  v:"in:0,1,2"        d:"0"                                                                     dc:"额外标签模式：0-默认,1-选3标签,2-组合高星"`
-	Times           int             `json:"times"            v:"min:0"           d:"0"                                                                     dc:"招募次数"`
-	SetTime         bool            `json:"set_time"         v:""                d:"true"                                                                  dc:"是否设置招募时间"`
-	Expedite        bool            `json:"expedite"         v:""                d:"false"                                                                 dc:"是否使用加急许可"`
-	ExpediteTimes   int             `json:"expedite_times"   v:"min:0"           d:"0"                                                                     dc:"加急次数限制"`
-	SkipRobot       bool            `json:"skip_robot"       v:""                d:"true"                                                                  dc:"是否跳过机器人标签"`
-	RecruitmentTime map[string]int  `json:"recruitment_time" v:""                d:"3:540,4:540,5:540,6:540"                                              dc:"各星级招募时间（分钟）"`
-	ReportToPenguin bool            `json:"report_to_penguin" v:""               d:"false"                                                                 dc:"上报企鹅数据"`
-	PenguinID       string          `json:"penguin_id"       v:"required-if:ReportToPenguin,true" d:""                                                    dc:"企鹅数据ID"`
-	ReportToYituliu bool            `json:"report_to_yituliu" v:""               d:"false"                                                                 dc:"上报一图流数据"`
-	YituliuID       string          `json:"yituliu_id"       v:"required-if:ReportToYituliu,true" d:""                                                    dc:"一图流数据ID"`
-	Server          string          `json:"server"           v:"in:CN,US,JP,KR"  d:"CN"                                                                    dc:"服务器地区"`
+	Enable          bool            `json:"enable"           v:"boolean"         d:"true"                                 dc:"是否启用本任务"`
+	Refresh         bool            `json:"refresh"          v:""                d:"false"                                dc:"是否刷新三星标签"`
+	Select          []int           `json:"select"           v:"required"                                                 dc:"点击标签等级（必选）"`
+	Confirm         []int           `json:"confirm"          v:""                                                         dc:"确认标签等级"`
+	FirstTags       []string        `json:"first_tags"       v:""                d:""                                     dc:"首选标签"`
+	ExtraTagsMode   int             `json:"extra_tags_mode"  v:"in:0,1,2"        d:"0"                                    dc:"额外标签模式：0-默认,1-选3标签,2-组合高星"`
+	Times           int             `json:"times"            v:"min:0"           d:"0"                                    dc:"招募次数"`
+	SetTime         bool            `json:"set_time"         v:""                d:"true"                                 dc:"是否设置招募时间"`
+	Expedite        bool            `json:"expedite"         v:""                d:"false"                                dc:"是否使用加急许可"`
+	ExpediteTimes   int             `json:"expedite_times"   v:"min:0"           d:"0"                                    dc:"加急次数限制"`
+	SkipRobot       bool            `json:"skip_robot"       v:""                d:"true"                                 dc:"是否跳过机器人标签"`
+	RecruitmentTime map[string]int  `json:"recruitment_time" v:""                d:"3:540,4:540,5:540,6:540"             dc:"各星级招募时间（分钟）"`
+	ReportToPenguin bool            `json:"report_to_penguin" v:""               d:"false"                                dc:"上报企鹅数据"`
+	PenguinID       string          `json:"penguin_id"       v:"required-if:ReportToPenguin,true" d:""                   dc:"企鹅数据ID"`
+	ReportToYituliu bool            `json:"report_to_yituliu" v:""               d:"false"                                dc:"上报一图流数据"`
+	YituliuID       string          `json:"yituliu_id"       v:"required-if:ReportToYituliu,true" d:""                   dc:"一图流数据ID"`
+	Server          string          `json:"server"           v:"in:CN,US,JP,KR"  d:"CN"                                   dc:"服务器地区"`
 }
 
 func (t *TaskRecruit) Serialize() string {
