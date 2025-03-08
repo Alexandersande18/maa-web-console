@@ -869,7 +869,7 @@
               try {
                 let json = JSON.parse(logMessage);
                 // 只显示时间和 message
-                const timestamp = json.timestamp ? parseInt(json.timestamp) : Date.now();
+                const timestamp = json.timestamp ? parseInt(json.timestamp) * 1000 : Date.now();
                 const time = new Date(timestamp).toLocaleTimeString('zh-CN', {
                   hour12: false,
                   hour: '2-digit',
