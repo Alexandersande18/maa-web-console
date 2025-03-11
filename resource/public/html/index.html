@@ -335,9 +335,9 @@
     // 默认任务配置
     let taskConfigs = {
       taskRecruit: {
-         refresh: false,
-         select: "3",
-         confirm: "",
+         refresh: true,
+         select: "3,4,5",
+         confirm: "3,4,5",
          first_tags: "",
          extra_tags_mode: 0,
          times: 4,
@@ -358,8 +358,8 @@
         drones: "Money",
         threshold: 0.3,
         replenish: false,
-        dorm_notstationed_enabled: false,
-        dorm_trust_enabled: false,
+        dorm_notstationed_enabled: true,
+        dorm_trust_enabled: true,
         filename: "",
         plan_index: 0
       },
@@ -369,7 +369,7 @@
         expiring_medicine: 0,
         stone: 0,
         times: 2147483647,
-        series: 1,
+        series: 2,
         drops: "{}",
         report_to_penguin: false,
         penguin_id: "",
@@ -380,7 +380,7 @@
       taskMall: {
         shopping: true,
         visit_friends: true,
-        buy_first: "",
+        buy_first: "招聘许可,龙门币",
         blacklist: "",
         force_shopping_if_credit_full: true,
         only_buy_discount: false,
@@ -399,12 +399,12 @@
     // 字段中文映射及配置
     const fieldConfig = {
       taskRecruit: {
-        refresh: { label: "刷新三星标签" },
-        select: { label: "点击标签等级", hint: "多个标签用逗号分隔，例如:3,4" },
-        confirm: { label: "确认标签等级", hint: "多个标签用逗号分隔" },
-        first_tags: { label: "首选标签", hint: "仅在标签等级为3时有效，多个标签用逗号分隔" },
+        refresh: { label: "如果是三星Tag则继续尝试刷新" },
+        select: { label: "会自动点击的点击标签等级", hint: "多个标签用逗号分隔，例如:3,4" },
+        confirm: { label: "会自动确认的标签等级", hint: "多个标签用逗号分隔" },
+        first_tags: { label: "偏好标签", hint: "仅在标签等级为3时有效，多个标签用逗号分隔" },
         extra_tags_mode: { label: "额外标签模式", type: "select", options: {"0": "默认行为（0）", "1": "选3个标签（1）", "2": "组合高星标签（2）"} },
-        times: { label: "招募次数", hint: "0表示仅公招计算" },
+        times: { label: "执行招募的次数", hint: "0表示仅公招计算" },
         set_time: { label: "设置招募时间" },
         expedite: { label: "使用加急许可" },
         expedite_times: { label: "加急次数", hint: "仅在使用加急许可时有效" },
@@ -421,9 +421,9 @@
         facility: { label: "换班设施", hint: "逗号分隔，例如：Mfg,Trade" },
         drones: { label: "无人机用途", type: "select", options: {"_NotUse":"不使用","Money":"龙门币","SyntheticJade":"合成玉"} },
         threshold: { label: "心情阈值" },
-        replenish: { label: "贸易站补货" },
-        dorm_notstationed_enabled: { label: "启用未进驻" },
-        dorm_trust_enabled: { label: "填入信赖未满" },
+        replenish: { label: "贸易站源石碎片是否自动补货" },
+        dorm_notstationed_enabled: { label: "是否启用宿舍未进驻选项" },
+        dorm_trust_enabled: { label: "是否将宿舍剩余位置填入信赖未满干员" },
         filename: { label: "配置文件路径" },
         plan_index: { label: "方案序号" }
       },
@@ -446,7 +446,7 @@
         visit_friends: { label: "访问好友" },
         buy_first: { label: "优先购买", hint: "逗号分隔商品" },
         blacklist: { label: "黑名单", hint: "逗号分隔商品" },
-        force_shopping_if_credit_full: { label: "信用溢出购买" },
+        force_shopping_if_credit_full: { label: "是否在信用溢出时无视黑名单" },
         only_buy_discount: { label: "仅购折扣" },
         reserve_max_credit: { label: "保留信用" }
       },
