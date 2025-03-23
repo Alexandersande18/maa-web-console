@@ -39,8 +39,9 @@ var (
 	asstStop          procCall
 	asstRunning       procCall
 	asstDestroy       procCall
-	asstGetImage     procCall
-    asstGetTasksList procCall
+	asstGetImage      procCall
+    asstGetTasksList  procCall
+	asstAsyncScreencap procCall
 )
 
 func newSyscall(path string) (err error) {
@@ -126,6 +127,11 @@ func initFunc(dll *syscall.DLL) (err error) {
     if err != nil {
         return
     }
+
+	asstAsyncScreencap, err = createAsstFunc("AsstAsyncScreencap", dll)
+	if err != nil {
+		return
+	}
     
 	return nil
 }

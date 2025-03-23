@@ -24,6 +24,7 @@ func (c *ControllerV1) Logs(ctx context.Context, req *v1.LogsReq) (res *v1.LogsR
 	r.Response.Header().Set("Content-Type", "text/event-stream")
 	r.Response.Header().Set("Cache-Control", "no-cache")
 	r.Response.Header().Set("Connection", "keep-alive")
+	r.Response.Header().Set("X-Accel-Buffering", "no")
 	// 创建客户端连接
 	username, ok := ctx.Value(middleware.CtxUsername).(string)
 	if !ok {
@@ -42,6 +43,8 @@ func (c *ControllerV1) Logs(ctx context.Context, req *v1.LogsReq) (res *v1.LogsR
 	}
 	defer service.Maasst().DeleteSSEClient(username, clientId)
 		// 保持连接
+	g.Log().Info(ctx, "SSE client created: ", clientId)
+	
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 		for {

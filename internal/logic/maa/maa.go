@@ -30,7 +30,7 @@ var (
 	ErrorAsstStop          = errors.New("AsstStop failed")
 	ErrorAsstRunning       = errors.New("AsstRunning failed")
 	ErrorAsstDestroy       = errors.New("AsstDestroy failed")
-	ErrTooLargeAllocation = errors.New("buffer allocation exceeds maximum limit")
+	ErrTooLargeAllocation  = errors.New("buffer allocation exceeds maximum limit")
 )
 
 type AsstCallback func(message int, details uintptr, arg uintptr) uintptr
@@ -300,7 +300,7 @@ func (m *Maa) GetImage() ([]byte, error) {
     )
     
     buffSize := initialBufferSize
-    
+    m.GetImageAsync()
     for {
         if buffSize > maxBufferSize {
             return nil, ErrTooLargeAllocation
@@ -330,6 +330,15 @@ func (m *Maa) GetImage() ([]byte, error) {
         // 返回有效数据（自动截断多余容量）
         return buffer[:actualSize], nil
     }
+}
+
+func (m *Maa) GetImageAsync() {
+	callId, _, err := asstAsyncScreencap(m.asstHandle, uintptr(1))
+	log.WithFields(log.Fields{
+		"r1":  callId,
+		"err": err,
+	}).Println("AsstAsyncScreencap")
+	g.Log().Debugf(context.TODO(), "AsstAsyncScreencap callId: %d", callId)
 }
 
 

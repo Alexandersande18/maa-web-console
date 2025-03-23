@@ -356,7 +356,7 @@ func NewMaalogFromDetail(detail string, code int) *Maalog {
 
 func Filterd(code int) bool {
 	switch code {
-	case ConnectionInfo, AsyncCallInfo, Destroyed, SubTaskCompleted, 
+	case ConnectionInfo, Destroyed, SubTaskCompleted, 
 		 SubTaskError, SubTaskStart, SubTaskStopped:
 		return true
 	}

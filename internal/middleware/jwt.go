@@ -29,6 +29,9 @@ func JWTAuth(r *ghttp.Request) {
 	// Get token from Authorization header
 	tokenString := r.Header.Get("Authorization")
 	if tokenString == "" {
+		tokenString = r.URL.Query().Get("token")
+	}
+	if tokenString == "" {
 		r.SetError(gerror.NewCode(gcode.CodeNotAuthorized, "No token provided"))
 		return
 	}

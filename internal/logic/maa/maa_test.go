@@ -72,6 +72,23 @@ func TestGetImg(t *testing.T)  {
     
 }
 
+func TestGetImgAsync(t *testing.T)  {
+    cfg, err := LoadConfig()
+    if err != nil {
+        t.Error(err)
+    }
+    maa, err := New(cfg.Asst[1])
+    if err != nil {
+        t.Error(err)
+    }
+    // maa.AppendHook(&TaskCallback{})
+    if maa == nil {
+        t.Error("maa is nil")
+    }
+    maa.GetImageAsync()
+    time.Sleep(25 * time.Second)
+}
+
 func UTF16PtrFromString(s string) (*uint16, error) {
     return syscall.UTF16PtrFromString(s)
 }

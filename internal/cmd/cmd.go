@@ -63,6 +63,7 @@ var (
                 group.Middleware(middleware.JWTAuth)
                 group.Bind(
                     maasst.NewV1().Logs,
+                    maasst.NewV1().LogsWS,
                 )
             })
             s.SetSwaggerUITemplate(MySwaggerUITemplate)

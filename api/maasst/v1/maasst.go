@@ -49,3 +49,9 @@ type LogsReq struct {
 }
 
 type LogsRes struct {}
+
+type LogsWSReq struct {
+	g.Meta `path:"/maasst/logs-ws" Tags:"maasst" method:"get" summary:"LogsGETReq"`
+}
+
+type LogsWSRes struct {}
