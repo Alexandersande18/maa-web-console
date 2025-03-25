@@ -53,14 +53,21 @@ var (
                 group.Middleware(ghttp.MiddlewareHandlerResponse)
                 group.Bind(maasst.NewV1().Login)
                 group.Middleware(middleware.JWTAuth)
+                group.Middleware(middleware.LogMiddleware)
                 group.Bind(
                     maasst.NewV1().LinkStart,
                     maasst.NewV1().Screenshot,
                     maasst.NewV1().StopTask,
+                    maasst.NewV1().AddCronJob,
+                    maasst.NewV1().DeleteCronJob,
+                    maasst.NewV1().GetCronJobList,
+                    maasst.NewV1().UpdateCronJob,
+                    maasst.NewV1().ExecCronJob,
                 )
             })
             s.Group("/", func(group *ghttp.RouterGroup) {
                 group.Middleware(middleware.JWTAuth)
+                group.Middleware(middleware.LogMiddleware)
                 group.Bind(
                     maasst.NewV1().Logs,
                     maasst.NewV1().LogsWS,

@@ -17,7 +17,7 @@ type TaskCallback struct {
 
 //回调
 func (t *TaskCallback) Do(message int, details string, arg interface{}) {
-	g.Log().Info(context.TODO(), "CallBack--->>>", message, details, arg)
+	g.Log().Debug(context.TODO(), "CallBack--->>>", message, details, arg)
 	if dto.Filterd(message) {
 		return
 	}

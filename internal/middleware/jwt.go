@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"net/http"
+
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -32,6 +34,7 @@ func JWTAuth(r *ghttp.Request) {
 		tokenString = r.URL.Query().Get("token")
 	}
 	if tokenString == "" {
+		r.Response.Status = http.StatusUnauthorized
 		r.SetError(gerror.NewCode(gcode.CodeNotAuthorized, "No token provided"))
 		return
 	}
@@ -48,6 +51,7 @@ func JWTAuth(r *ghttp.Request) {
 	})
 
 	if err != nil || !token.Valid {
+		r.Response.Status = http.StatusUnauthorized
 		r.SetError(gerror.NewCode(gcode.CodeNotAuthorized, "Invalid token"))
 		return
 	}
