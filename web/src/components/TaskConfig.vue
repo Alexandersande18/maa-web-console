@@ -1,18 +1,53 @@
 <template>
   <div>
     <h2>任务配置</h2>
+    <!-- 定时任务列表区域（无标题），滚动显示 -->
+    <div class="box" id="cronjob-section">
+      <div class="cronjob-scroll">
+        <template v-if="cronJobs.length">
+          <div
+            class="cronjob-item"
+            v-for="job in cronJobs"
+            :key="job.id"
+            :class="{ selected: currentCronJob && currentCronJob.id === job.id }"
+            @click="selectCronJob(job)"
+          >
+            <div class="item-content">
+              <div>
+                <strong>{{ job.name }}</strong>
+                <span v-if="job.isTemplate === 1" class="badge badge-template">模板任务</span>
+                <span v-else class="badge badge-normal">常规任务</span>
+              </div>
+              <div>
+                执行时间: {{ job.hour }}:
+                {{ job.minute < 10 ? ('0' + job.minute) : job.minute }}
+              </div>
+              <div>上次执行: {{ job.lastExecutedAt ? job.lastExecutedAt : '未执行' }}</div>
+            </div>
+            <!-- 每个表项右侧增加“配置”和“删除”按钮 -->
+            <div class="item-actions">
+              <button class="btn btn-info btn-cron-config" @click.stop="openEditCronJobModal(job)">配置</button>
+              <button class="btn btn-danger btn-cron-delete" @click.stop="confirmAndDelete(job)">删除</button>
+            </div>
+          </div>
+        </template>
+        <div v-else class="empty-cronjob">没有定时任务</div>
+      </div>
+    </div>
+
+    <!-- 原有任务配置区域 -->
     <div class="box" id="task-config-box">
       <div id="task-configurations">
         <div
           class="task-item"
           v-for="(task, key) in tasks"
           :key="key"
-          :class="{ selected: task.selected }"
+          :class="{ selected: task.enable }"
           @click="toggleTaskSelection(key)"
         >
           <strong>{{ task.label }}</strong>
           <button class="config-button" @click.stop="openConfig(key)">配置</button>
-          <!-- 仅当配置保存后才显示 JSON 预览 -->
+          <!-- 配置保存后显示 JSON 预览 -->
           <div class="config-summary" v-if="task.configSummary">
             {{ task.configSummary }}
           </div>
@@ -21,9 +56,12 @@
       <div class="action-buttons">
         <button class="btn btn-success" @click="startTasks">开始任务</button>
         <button class="btn btn-danger" @click="stopTasks">停止任务</button>
+        <!-- 添加定时任务按钮放到这组按钮的右侧 -->
+        <button class="btn btn-add-cron" @click="openAddCronJobFromTasks">添加为定时任务</button>
+        <button v-if="currentCronJob" class="btn btn-info" @click="updateCronJob">保存定时任务</button>
       </div>
 
-      <!-- 引入任务配置模态框 -->
+      <!-- 任务配置模态框 -->
       <ConfigModal
         v-if="showModal"
         :taskKey="currentTaskKey"
@@ -33,23 +71,33 @@
         @close="closeModal"
       />
     </div>
+
+    <!-- 定时任务模态框，用于添加或编辑（配置）定时任务 -->
+    <CronJobModal
+      v-if="showCronJobModal"
+      :cronJobData="cronJobModalData"
+      :isEditing="isEditingCronJob"
+      @add="handleAddCronJob"
+      @update="updateCronJobFromModal"
+      @close="closeCronJobModal"
+    />
   </div>
 </template>
 
 <script>
 import ConfigModal from "./ConfigModal.vue";
+import CronJobModal from "./CronJobModal.vue";
 
 export default {
   name: "TaskConfig",
-  components: { ConfigModal },
-  data() { 
+  components: { ConfigModal, CronJobModal },
+  data() {
     return {
       tasks: {
         taskRecruit: {
           label: "自动公招",
-          selected: false,
+          enable: false,
           config: {
-            // 默认配置
             refresh: true,
             select: "3,4,5",
             confirm: "3,4,5",
@@ -67,12 +115,11 @@ export default {
             yituliu_id: "",
             server: "CN"
           },
-          // 默认不显示预览
           configSummary: ""
         },
         taskInfrast: {
           label: "基建换班",
-          selected: false,
+          enable: false,
           config: {
             mode: 0,
             facility: "Mfg,Trade,Power,Control,Reception,Office,Dorm",
@@ -88,7 +135,7 @@ export default {
         },
         taskFight: {
           label: "刷理智",
-          selected: false,
+          enable: false,
           config: {
             stage: "",
             medicine: 0,
@@ -107,7 +154,7 @@ export default {
         },
         taskMall: {
           label: "信用商店购物",
-          selected: false,
+          enable: false,
           config: {
             shopping: true,
             visit_friends: true,
@@ -121,7 +168,7 @@ export default {
         },
         taskAward: {
           label: "领取奖励",
-          selected: false,
+          enable: false,
           config: {
             award: true,
             mail: true,
@@ -133,7 +180,6 @@ export default {
           configSummary: ""
         }
       },
-      // 字段中文映射及其他配置，预留了每个任务字段的中文 label 及提示
       fieldConfig: {
         taskRecruit: {
           refresh: { label: "如果是三星Tag则继续尝试刷新" },
@@ -200,9 +246,9 @@ export default {
             }
           },
           threshold: { label: "心情阈值" },
-          replenish: { label: "贸易站源石碎片是否自动补货" },
-          dorm_notstationed_enabled: { label: "是否启用宿舍未进驻选项" },
-          dorm_trust_enabled: { label: "是否将宿舍剩余位置填入信赖未满干员" },
+          replenish: { label: "贸易站自动补货" },
+          dorm_notstationed_enabled: { label: "启用未进驻宿舍" },
+          dorm_trust_enabled: { label: "填入信赖未满干员" },
           filename: { label: "配置文件路径" },
           plan_index: { label: "方案序号" }
         },
@@ -213,7 +259,7 @@ export default {
           },
           medicine: { label: "最大使用理智药数量" },
           expiring_medicine: { label: "最大使用临期理智药数量" },
-          stone: { label: "最大吃源石数量" },
+          stone: { label: "最大吃石头数量" },
           times: {
             label: "执行次数",
             hint: "2147483647表示无限，刷到理智不够"
@@ -243,7 +289,7 @@ export default {
           },
           blacklist: { label: "黑名单", hint: "逗号分隔商品" },
           force_shopping_if_credit_full: {
-            label: "是否在信用溢出时无视黑名单"
+            label: "信用溢出时无视黑名单"
           },
           only_buy_discount: { label: "仅购折扣" },
           reserve_max_credit: { label: "保留信用" }
@@ -258,12 +304,22 @@ export default {
         }
       },
       showModal: false,
-      currentTaskKey: ""
+      currentTaskKey: "",
+      // 定时任务数据
+      cronJobs: [],
+      currentCronJob: null,
+      showCronJobModal: false,
+      // 用于定时任务模态框（添加或编辑）的数据及编辑标识
+      cronJobModalData: null,
+      isEditingCronJob: false
     };
+  },
+  mounted() {
+    this.fetchCronJobs();
   },
   methods: {
     toggleTaskSelection(key) {
-      this.tasks[key].selected = !this.tasks[key].selected;
+      this.tasks[key].enable = !this.tasks[key].enable;
     },
     openConfig(key) {
       this.currentTaskKey = key;
@@ -274,12 +330,11 @@ export default {
     },
     saveTaskConfig(newConfig) {
       this.tasks[this.currentTaskKey].config = newConfig;
-      // 只在用户保存配置后更新预览
       this.tasks[this.currentTaskKey].configSummary = JSON.stringify(newConfig);
       this.closeModal();
     },
     /**
-     * 根据不同任务，对部分配置进行转换（如字符串拆分、JSON解析等）
+     * 配置转换方法
      */
     processTaskConfig(key, config) {
       switch (key) {
@@ -296,10 +351,7 @@ export default {
               .map((s) => parseInt(s.trim()))
               .filter((n) => !isNaN(n));
           }
-          if (
-            typeof config.first_tags === "string" &&
-            config.first_tags.trim() !== ""
-          ) {
+          if (typeof config.first_tags === "string" && config.first_tags.trim() !== "") {
             config.first_tags = config.first_tags
               .split(",")
               .map((s) => s.trim())
@@ -307,10 +359,7 @@ export default {
           } else {
             config.first_tags = [];
           }
-          if (
-            typeof config.recruitment_time === "string" &&
-            config.recruitment_time.trim() !== ""
-          ) {
+          if (typeof config.recruitment_time === "string" && config.recruitment_time.trim() !== "") {
             try {
               config.recruitment_time = JSON.parse(config.recruitment_time);
             } catch (e) {
@@ -319,10 +368,7 @@ export default {
           }
           break;
         case "taskInfrast":
-          if (
-            typeof config.facility === "string" &&
-            config.facility.trim() !== ""
-          ) {
+          if (typeof config.facility === "string" && config.facility.trim() !== "") {
             config.facility = config.facility
               .split(",")
               .map((s) => s.trim())
@@ -330,10 +376,7 @@ export default {
           }
           break;
         case "taskFight":
-          if (
-            typeof config.drops === "string" &&
-            config.drops.trim() !== ""
-          ) {
+          if (typeof config.drops === "string" && config.drops.trim() !== "") {
             try {
               config.drops = JSON.parse(config.drops);
             } catch (e) {
@@ -342,10 +385,7 @@ export default {
           }
           break;
         case "taskMall":
-          if (
-            typeof config.buy_first === "string" &&
-            config.buy_first.trim() !== ""
-          ) {
+          if (typeof config.buy_first === "string" && config.buy_first.trim() !== "") {
             config.buy_first = config.buy_first
               .split(",")
               .map((s) => s.trim())
@@ -353,10 +393,7 @@ export default {
           } else {
             config.buy_first = [];
           }
-          if (
-            typeof config.blacklist === "string" &&
-            config.blacklist.trim() !== ""
-          ) {
+          if (typeof config.blacklist === "string" && config.blacklist.trim() !== "") {
             config.blacklist = config.blacklist
               .split(",")
               .map((s) => s.trim())
@@ -370,18 +407,70 @@ export default {
       }
       return config;
     },
-    async startTasks() {
-      const body = {};
+    reverseProcessTaskConfig(key, config) {
+      let cfg = { ...config };
+      switch (key) {
+        case "taskRecruit":
+          if (Array.isArray(cfg.select)) {
+            cfg.select = cfg.select.join(",");
+          }
+          if (Array.isArray(cfg.confirm)) {
+            cfg.confirm = cfg.confirm.join(",");
+          }
+          if (Array.isArray(cfg.first_tags)) {
+            cfg.first_tags = cfg.first_tags.join(",");
+          }
+          if (cfg.recruitment_time && typeof cfg.recruitment_time === "object") {
+            try {
+              cfg.recruitment_time = JSON.stringify(cfg.recruitment_time);
+            } catch (e) {
+              cfg.recruitment_time = "";
+            }
+          }
+          break;
+        case "taskInfrast":
+          if (Array.isArray(cfg.facility)) {
+            cfg.facility = cfg.facility.join(",");
+          }
+          break;
+        case "taskFight":
+          if (cfg.drops && typeof cfg.drops === "object") {
+            try {
+              cfg.drops = JSON.stringify(cfg.drops);
+            } catch (e) {
+              cfg.drops = "";
+            }
+          }
+          break;
+        case "taskMall":
+          if (Array.isArray(cfg.buy_first)) {
+            cfg.buy_first = cfg.buy_first.join(",");
+          }
+          if (Array.isArray(cfg.blacklist)) {
+            cfg.blacklist = cfg.blacklist.join(",");
+          }
+          break;
+        default:
+          break;
+      }
+      return cfg;
+    },
+    // 获取每个启用任务的 payload（减少 startTasks 与 stopTasks 重复）
+    getTasksPayload(enableFlag) {
+      const payload = {};
       for (const key in this.tasks) {
         const task = this.tasks[key];
-        if (task.selected) {
+        if (task.enable) {
           let config = { ...task.config };
           config = this.processTaskConfig(key, config);
-          // 启动任务时设置启用标记
-          config.enable = true;
-          body[key] = config;
+          config.enable = enableFlag;
+          payload[key] = config;
         }
       }
+      return payload;
+    },
+    async startTasks() {
+      const body = this.getTasksPayload(true);
       const jwtToken = localStorage.getItem("jwtToken");
       try {
         const response = await fetch("/maasst/linkstart", {
@@ -403,16 +492,7 @@ export default {
       }
     },
     async stopTasks() {
-      const body = {};
-      for (const key in this.tasks) {
-        const task = this.tasks[key];
-        if (task.selected) {
-          let config = { ...task.config };
-          config = this.processTaskConfig(key, config);
-          config.enable = false;
-          body[key] = config;
-        }
-      }
+      const body = this.getTasksPayload(false);
       const jwtToken = localStorage.getItem("jwtToken");
       try {
         const response = await fetch("/maasst/stoptask", {
@@ -432,6 +512,220 @@ export default {
       } catch (e) {
         alert("请求异常：" + e.message);
       }
+    },
+    async fetchCronJobs() {
+      const jwtToken = localStorage.getItem("jwtToken");
+      try {
+        const response = await fetch("/maasst/cronjob", {
+          headers: { Authorization: jwtToken }
+        });
+        const result = await response.json();
+        if (result.data && result.data.cronJobList) {
+          this.cronJobs = result.data.cronJobList;
+        }
+      } catch (e) {
+        alert("请求定时任务列表异常：" + e.message);
+      }
+    },
+    selectCronJob(cronJob) {
+      this.currentCronJob = {
+        ...cronJob,
+        isTemplateBool: cronJob.isTemplate === 1
+      };
+
+      // 用数组简化除了 taskAward 之外的重复代码
+      const keysToProcess = ["taskRecruit", "taskInfrast", "taskFight", "taskMall"];
+      keysToProcess.forEach((key) => {
+        if (cronJob[key]) {
+          const reversedConfig = this.reverseProcessTaskConfig(key, cronJob[key]);
+          this.tasks[key].config = { ...reversedConfig };
+          this.tasks[key].configSummary = JSON.stringify(
+            this.processTaskConfig(key, { ...cronJob[key] })
+          );
+          if (cronJob[key].enable !== undefined) {
+            this.tasks[key].enable = cronJob[key].enable;
+          }
+        }
+      });
+      if (cronJob.taskAward) {
+        this.tasks.taskAward.config = { ...cronJob.taskAward };
+        this.tasks.taskAward.configSummary = JSON.stringify(cronJob.taskAward);
+        if (cronJob.taskAward.enable !== undefined) {
+          this.tasks.taskAward.enable = cronJob.taskAward.enable;
+        }
+      }
+    },
+    // --------------------
+    // 新增：从任务配置区域点击“添加为定时任务”，打开模态框（添加模式）
+    openAddCronJobFromTasks() {
+      this.isEditingCronJob = false;
+      this.cronJobModalData = {
+        name: "",
+        hour: 0,
+        minute: 0,
+        isTemplate: 0
+      };
+      this.showCronJobModal = true;
+    },
+    // --------------------
+    // 新增：点击表项中“配置”按钮，打开模态框（编辑模式）
+    openEditCronJobModal(job) {
+      this.isEditingCronJob = true;
+      this.cronJobModalData = {
+        id: job.id,
+        name: job.name,
+        hour: job.hour,
+        minute: job.minute,
+        isTemplate: job.isTemplate
+      };
+      this.showCronJobModal = true;
+    },
+    // 关闭定时任务模态框
+    closeCronJobModal() {
+      this.showCronJobModal = false;
+      this.cronJobModalData = null;
+      this.isEditingCronJob = false;
+    },
+    // --------------------
+    // 新增：处理添加定时任务（数据来源由模态框返回）
+    handleAddCronJob(data) {
+      const payload = {
+        name: data.name,
+        hour: data.hour,
+        minute: data.minute,
+        isTemplate: data.isTemplate,
+        taskRecruit: this.processTaskConfig("taskRecruit", { ...this.tasks.taskRecruit.config, enable: this.tasks.taskRecruit.enable }),
+        taskInfrast: this.processTaskConfig("taskInfrast", { ...this.tasks.taskInfrast.config, enable: this.tasks.taskInfrast.enable }),
+        taskFight: this.processTaskConfig("taskFight", { ...this.tasks.taskFight.config, enable: this.tasks.taskFight.enable }),
+        taskMall: this.processTaskConfig("taskMall", { ...this.tasks.taskMall.config, enable: this.tasks.taskMall.enable }),
+        taskAward: this.processTaskConfig("taskAward", { ...this.tasks.taskAward.config, enable: this.tasks.taskAward.enable })
+      };
+      const jwtToken = localStorage.getItem("jwtToken");
+      fetch("/maasst/cronjob", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: jwtToken
+        },
+        body: JSON.stringify(payload)
+      })
+        .then(response => response.json())
+        .then(result => {
+          if (result.data && result.data.id !== undefined) {
+            alert("添加定时任务成功");
+            this.fetchCronJobs();
+          } else {
+            alert("添加定时任务失败");
+          }
+        })
+        .catch(e => {
+          alert("添加定时任务异常：" + e.message);
+        });
+      this.closeCronJobModal();
+    },
+    // --------------------
+    // 编辑模式：点击“修改”按钮，更新定时任务（仅修改定时任务基本信息）
+    updateCronJobFromModal(updatedCronJob) {
+      if (!updatedCronJob || !updatedCronJob.id) {
+        alert("定时任务不存在");
+        return;
+      }
+      const payload = {
+        id: updatedCronJob.id,
+        name: updatedCronJob.name,
+        hour: updatedCronJob.hour,
+        minute: updatedCronJob.minute,
+        isTemplate: updatedCronJob.isTemplate ? 1 : 0
+      };
+      const jwtToken = localStorage.getItem("jwtToken");
+      fetch("/maasst/cronjob", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: jwtToken
+        },
+        body: JSON.stringify(payload)
+      })
+        .then(response => response.json())
+        .then(result => {
+          if (result.code === 0) {
+            alert("定时任务修改成功");
+            this.fetchCronJobs();
+            this.closeCronJobModal();
+          } else {
+            alert("定时任务修改失败：" + (result.message || "未知错误"));
+          }
+        })
+        .catch(e => {
+          alert("更新定时任务异常：" + e.message);
+        });
+    },
+    // --------------------
+    // “保存定时任务”方法，将任务配置区域的各项配置同步更新到定时任务
+    async updateCronJob() {
+      if (!this.currentCronJob || !this.currentCronJob.id) {
+        alert("没有选中的定时任务");
+        return;
+      }
+      this.currentCronJob.isTemplate = this.currentCronJob.isTemplateBool ? 1 : 0;
+      const payload = {
+        id: this.currentCronJob.id,
+        name: this.currentCronJob.name,
+        hour: this.currentCronJob.hour,
+        minute: this.currentCronJob.minute,
+        isTemplate: this.currentCronJob.isTemplate,
+        taskRecruit: this.processTaskConfig("taskRecruit", { ...this.tasks.taskRecruit.config, enable: this.tasks.taskRecruit.enable }),
+        taskInfrast: this.processTaskConfig("taskInfrast", { ...this.tasks.taskInfrast.config, enable: this.tasks.taskInfrast.enable }),
+        taskFight: this.processTaskConfig("taskFight", { ...this.tasks.taskFight.config, enable: this.tasks.taskFight.enable }),
+        taskMall: this.processTaskConfig("taskMall", { ...this.tasks.taskMall.config, enable: this.tasks.taskMall.enable }),
+        taskAward: this.processTaskConfig("taskAward", { ...this.tasks.taskAward.config, enable: this.tasks.taskAward.enable })
+      };
+      const jwtToken = localStorage.getItem("jwtToken");
+      try {
+        const response = await fetch("/maasst/cronjob", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: jwtToken
+          },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (result.code === 0) {
+          alert("定时任务更新成功");
+          this.fetchCronJobs();
+        } else {
+          alert("定时任务更新失败：" + (result.message || "未知错误"));
+        }
+      } catch (e) {
+        alert("更新定时任务异常：" + e.message);
+      }
+    },
+    // --------------------
+    // 删除定时任务：点击删除按钮后确认
+    confirmAndDelete(job) {
+      if (confirm("确定要删除该定时任务吗？")) {
+        const jwtToken = localStorage.getItem("jwtToken");
+        fetch(`/maasst/cronjob?id=${job.id}`, {
+          method: "DELETE",
+          headers: { Authorization: jwtToken }
+        })
+          .then(response => response.json())
+          .then(result => {
+            if (result.code === 0) {
+              alert("定时任务删除成功");
+              if (this.currentCronJob && this.currentCronJob.id === job.id) {
+                this.currentCronJob = null;
+              }
+              this.fetchCronJobs();
+            } else {
+              alert("删除失败：" + (result.message || "未知错误"));
+            }
+          })
+          .catch(e => {
+            alert("删除定时任务异常：" + e.message);
+          });
+      }
     }
   }
 };
@@ -445,6 +739,70 @@ export default {
   padding: 15px;
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cronjob-scroll {
+  max-height: 300px; /* 可根据实际需求调整高度 */
+  overflow-y: auto;
+  width: 100%;
+  padding-right: 5px; /* 保留一点右边间隙，显示滚动条 */
+}
+
+.empty-cronjob {
+  text-align: center;
+  color: #999;
+  padding: 10px;
+}
+
+.cronjob-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 5px 0;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.cronjob-item:hover {
+  background-color: #f0f0f0;
+}
+
+.cronjob-item.selected {
+  background-color: #e6f7ff;
+  border-color: #1890ff;
+}
+
+.item-content {
+  flex: 1;
+}
+
+.item-actions {
+  display: flex;
+  align-items: center;
+}
+
+.item-actions button {
+  margin-left: 5px;
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.badge-template {
+  background-color: #007bff;
+}
+
+.badge-normal {
+  background-color: #6c757d;
 }
 
 .task-item {
@@ -520,5 +878,21 @@ export default {
 
 .btn-danger:hover {
   background-color: #c82333;
+}
+
+.btn-info {
+  background-color: #17a2b8;
+}
+
+.btn-info:hover {
+  background-color: #138496;
+}
+
+.btn-add-cron {
+  background-color: #007bff;
+}
+
+.btn-add-cron:hover {
+  background-color: #0056b3;
 }
 </style>

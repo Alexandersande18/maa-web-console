@@ -21,6 +21,9 @@ func (c *ControllerV1) UpdateCronJob(ctx context.Context, req *v1.UpdateCronJobR
 		Name: req.Name,
 		IsTemplate: req.IsTemplate,
 	}).WherePri(req.Id).Update()
+	if err != nil {
+		return
+	}
 
 	service.Croner().SetupCronJobs()
 	
