@@ -13,7 +13,8 @@
           </div>
         </div>
         <div class="buttons">
-          <button class="btn btn-primary" @click="clearLogs">清空日志</button>
+          <!-- 使用 Vant 的 van-button 组件替换原生 button -->
+          <van-button type="primary" size="small" @click="clearLogs">清空日志</van-button>
         </div>
       </div>
     </div>
@@ -168,20 +169,5 @@ export default {
 .buttons {
   text-align: right;
   margin-top: 10px;
-}
-
-.btn {
-  padding: 8px 12px;
-  margin: 5px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  color: var(--white);
-  background-color: var(--primary-color);
-}
-
-.btn:hover {
-  background-color: var(--primary-hover);
 }
 </style>

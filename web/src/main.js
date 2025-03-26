@@ -2,8 +2,8 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
-// import Vant from 'vant'
-// import 'vant/lib/index.css'
+import Vant from 'vant'
+import 'vant/lib/index.css'
 
 
 // // Vuetify
@@ -40,6 +40,6 @@ window.fetch = async (...args) => {
 
 createApp(App).
 use(router).
-// use(Vant).
+use(Vant).
 // use(vuetify).
 mount('#app')

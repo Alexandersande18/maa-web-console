@@ -26,8 +26,8 @@
             </div>
             <!-- 每个表项右侧增加“配置”和“删除”按钮 -->
             <div class="item-actions">
-              <button class="btn btn-info btn-cron-config" @click.stop="openEditCronJobModal(job)">配置</button>
-              <button class="btn btn-danger btn-cron-delete" @click.stop="confirmAndDelete(job)">删除</button>
+              <van-button size="small" type="primary" @click.stop="openEditCronJobModal(job)">配 置</van-button>
+              <van-button size="small" type="danger" @click.stop="confirmAndDelete(job)">删 除</van-button>
             </div>
           </div>
         </template>
@@ -46,20 +46,22 @@
           @click="toggleTaskSelection(key)"
         >
           <strong>{{ task.label }}</strong>
-          <button class="config-button" @click.stop="openConfig(key)">配置</button>
+          <van-button size="small" type="primary" class="config-button" @click.stop="openConfig(key)">配 置</van-button>
           <!-- 配置保存后显示 JSON 预览 -->
           <div class="config-summary" v-if="task.configSummary">
             {{ task.configSummary }}
           </div>
         </div>
       </div>
-      <div class="action-buttons">
-        <button class="btn btn-success" @click="startTasks">开始任务</button>
-        <button class="btn btn-danger" @click="stopTasks">停止任务</button>
+      <van-row justify="center">
+      <van-space >
+        <van-button size="small" type="success" @click="startTasks">开始任务</van-button>
+        <van-button size="small" type="danger" @click="stopTasks">停止任务</van-button>
         <!-- 添加定时任务按钮放到这组按钮的右侧 -->
-        <button class="btn btn-add-cron" @click="openAddCronJobFromTasks">添加为定时任务</button>
-        <button v-if="currentCronJob" class="btn btn-info" @click="updateCronJob">保存定时任务</button>
-      </div>
+        <van-button  size="small" type="primary" @click="openAddCronJobFromTasks">添加为定时任务</van-button>
+        <van-button v-if="currentCronJob" size="small" type="warning"  @click="updateCronJob">保存定时任务</van-button>
+      </van-space>
+    </van-row>
 
       <!-- 任务配置模态框 -->
       <ConfigModal
@@ -828,13 +830,13 @@ export default {
 
 .config-button {
   float: right;
-  background-color: #007bff;
+  /* background-color: #007bff;
   color: #fff;
   border: none;
   border-radius: 4px;
   padding: 8px 14px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s; */
 }
 
 .config-button:hover {

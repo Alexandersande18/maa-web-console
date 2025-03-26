@@ -3,9 +3,12 @@
     <h2>截图展示</h2>
     
     <div class="box" id="screenshot-box">
-      <div class="center-button">
-        <button class="btn btn-primary" @click="takeScreenshot">截图</button>
-      </div>
+      <van-row justify="center">
+        <!-- 使用 Vant 的 van-button，并设置 size 属性为 small -->
+        <van-button type="primary" size="small" @click="takeScreenshot">
+          截 图
+        </van-button>
+      </van-row>
       <div id="screenshot-display">
         <img
           id="screenshot-img"
@@ -66,26 +69,6 @@ export default {
 .center-button {
   text-align: center;
   margin-bottom: 15px;
-}
-
-/* 复用全局 btn 样式 */
-.btn {
-  padding: 8px 13px;
-  margin: 0px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  font-size: 14px;
-  color: var(--white);
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-hover);
 }
 
 #screenshot-display {
