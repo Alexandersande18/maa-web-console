@@ -56,7 +56,7 @@
         </div>
       </div>
       <van-row justify="center" wrap="true">
-        <van-space>
+        <van-space wrap>
           <van-button size="small" type="success" @click="startTasks">开 始</van-button>
           <van-button size="small" type="danger" @click="stopTasks">停 止</van-button>
           <!-- 添加定时任务按钮放到这组按钮的右侧 -->
