@@ -23,6 +23,12 @@ export default {
   --background-color: #f2f2f2;
 }
 
+:root:root {
+  --van-button-small-padding: 10px;
+  --van-button-small-font-size: 14px;
+  --van-button-small-height: 35px
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;

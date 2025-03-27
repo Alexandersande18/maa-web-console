@@ -53,10 +53,10 @@
           </div>
         </div>
       </div>
-      <van-row justify="center">
+      <van-row justify="center" wrap="true">
       <van-space >
-        <van-button size="small" type="success" @click="startTasks">开始任务</van-button>
-        <van-button size="small" type="danger" @click="stopTasks">停止任务</van-button>
+        <van-button size="small" type="success" @click="startTasks">开 始</van-button>
+        <van-button size="small" type="danger" @click="stopTasks">停 止</van-button>
         <!-- 添加定时任务按钮放到这组按钮的右侧 -->
         <van-button  size="small" type="primary" @click="openAddCronJobFromTasks">添加为定时任务</van-button>
         <van-button v-if="currentCronJob" size="small" type="warning"  @click="updateCronJob">保存定时任务</van-button>
