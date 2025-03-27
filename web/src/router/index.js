@@ -18,7 +18,7 @@ const routes = [
     component: MainView,
     meta: { 
       requiresAuth: true,
-      title: "🍬🧂🍬🧂🍬🧂" 
+      title: "阿酷奈次" 
     } // 设置元数据，标记此路由需要认证
   },
   { path: '/', redirect: '/login' }

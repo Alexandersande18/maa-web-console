@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h2>日志</h2>
+    <h3>日志</h3>
     <div class="box">
       <div class="log-wrapper">
         <div class="log-container" ref="logContainer">

@@ -24,9 +24,23 @@ export default {
 }
 
 :root:root {
+  --van-nav-bar-text-color: #ff4d4f;
   --van-button-small-padding: 10px;
   --van-button-small-font-size: 14px;
-  --van-button-small-height: 35px
+  --van-button-small-height: 35px;
+  --van-dialog-small-screen-width: 90%;
+  --van-cell-vertical-padding: 10px;
+  --van-cell-group-inset-padding: 0px;
+  --van-cell-group-title-color: rgba(0, 0, 0, 0.575);
+  --van-cell-group-title-font-size: 15px;
+  /* --van-cell-horizontal-padding: */
+  --van-dialog-width: 360px;
+  /* --van-dialog-background:var(--background-color); */
+
+}
+
+h3 {
+  margin-bottom: 5px; /* 根据需求调整具体数值 */
 }
 
 body {

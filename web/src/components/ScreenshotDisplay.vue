@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h2>截图展示</h2>
+    <h3>截图展示</h3>
     
     <div class="box" id="screenshot-box">
       <van-row justify="center">

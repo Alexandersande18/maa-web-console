@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h2>任务配置</h2>
+    <h3>任务配置</h3>
     <!-- 定时任务列表区域（无标题），滚动显示 -->
     <div class="box" id="cronjob-section">
       <div class="cronjob-scroll">
@@ -18,11 +18,13 @@
                 <span v-if="job.isTemplate === 1" class="badge badge-template">模板任务</span>
                 <span v-else class="badge badge-normal">常规任务</span>
               </div>
-              <div>
+              <div class="config-summary">
                 执行时间: {{ job.hour }}:
                 {{ job.minute < 10 ? ('0' + job.minute) : job.minute }}
               </div>
-              <div>上次执行: {{ job.lastExecutedAt ? job.lastExecutedAt : '未执行' }}</div>
+              <div class="config-summary">
+                上次执行: {{ formatTimestamp(job.lastExecutedAt) }}
+              </div>
             </div>
             <!-- 每个表项右侧增加“配置”和“删除”按钮 -->
             <div class="item-actions">
@@ -54,14 +56,14 @@
         </div>
       </div>
       <van-row justify="center" wrap="true">
-      <van-space >
-        <van-button size="small" type="success" @click="startTasks">开 始</van-button>
-        <van-button size="small" type="danger" @click="stopTasks">停 止</van-button>
-        <!-- 添加定时任务按钮放到这组按钮的右侧 -->
-        <van-button  size="small" type="primary" @click="openAddCronJobFromTasks">添加为定时任务</van-button>
-        <van-button v-if="currentCronJob" size="small" type="warning"  @click="updateCronJob">保存定时任务</van-button>
-      </van-space>
-    </van-row>
+        <van-space>
+          <van-button size="small" type="success" @click="startTasks">开 始</van-button>
+          <van-button size="small" type="danger" @click="stopTasks">停 止</van-button>
+          <!-- 添加定时任务按钮放到这组按钮的右侧 -->
+          <van-button size="small" type="primary" @click="openAddCronJobFromTasks">添加为定时任务</van-button>
+          <van-button v-if="currentCronJob" size="small" type="warning" @click="updateCronJob">保存定时任务</van-button>
+        </van-space>
+      </van-row>
 
       <!-- 任务配置模态框 -->
       <ConfigModal
@@ -320,6 +322,17 @@ export default {
     this.fetchCronJobs();
   },
   methods: {
+    // 将服务器返回的 UTC+0 时间转换为 UTC+8 (北京) 时间进行显示
+    formatTimestamp(timestamp) {
+      if (!timestamp) return "未执行";
+      // 如果返回的时间字符串没有时区标记，则追加 "Z" 表示UTC时间
+      if (!timestamp.endsWith("Z")) {
+        timestamp += "Z";
+      }
+      const date = new Date(timestamp);
+      // 通过 toLocaleString 并指定 timeZone 为 Asia/Shanghai 来展示 UTC+8 时间
+      return date.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
+    },
     toggleTaskSelection(key) {
       this.tasks[key].enable = !this.tasks[key].enable;
     },
@@ -830,13 +843,6 @@ export default {
 
 .config-button {
   float: right;
-  /* background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 14px;
-  cursor: pointer;
-  transition: background-color 0.3s; */
 }
 
 .config-button:hover {
@@ -845,7 +851,6 @@ export default {
 
 .config-summary {
   clear: both;
-  margin-top: 10px;
   font-size: 12px;
   color: #666;
   word-break: break-all;
