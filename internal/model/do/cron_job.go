@@ -21,6 +21,7 @@ type CronJob struct {
 	TaskRecruit    interface{} // 公招任务配置
 	TaskInfrast    interface{} // 基建任务配置
 	TaskFight      interface{} // 刷理智任务配置
+	TaskRoguelike  interface{} // 肉鸽任务配置
 	TaskMall       interface{} // 购物任务配置
 	TaskAward      interface{} // 领奖励任务配置
 	CreatedAt      *gtime.Time // 创建时间

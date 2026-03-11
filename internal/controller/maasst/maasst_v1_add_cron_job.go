@@ -3,7 +3,7 @@ package maasst
 import (
 	"context"
 
-	"maa-backend/api/maasst/v1"
+	v1 "maa-backend/api/maasst/v1"
 	"maa-backend/internal/dao"
 	"maa-backend/internal/middleware"
 	"maa-backend/internal/model/do"
@@ -16,20 +16,21 @@ func (c *ControllerV1) AddCronJob(ctx context.Context, req *v1.AddCronJobReq) (r
 	uid := gconv.String(ctx.Value(middleware.CtxUsername))
 	insertId, err := dao.CronJob.Ctx(ctx).Data(do.CronJob{
 		Username: uid,
-		Name: req.Name,
+		Name:     req.Name,
 		IsTemplate: func() int {
 			if req.IsTemplate == 0 {
 				return 0
 			}
 			return 1
 		}(),
-		Hour: req.Hour,
-		Minute: req.Minute,
-		TaskRecruit: req.TaskRecruit,
-		TaskInfrast: req.TaskInfrast,
-		TaskFight: req.TaskFight,
-		TaskMall: req.TaskMall,
-		TaskAward: req.TaskAward,
+		Hour:          req.Hour,
+		Minute:        req.Minute,
+		TaskRecruit:   req.TaskRecruit,
+		TaskInfrast:   req.TaskInfrast,
+		TaskFight:     req.TaskFight,
+		TaskRoguelike: req.TaskRoguelike,
+		TaskMall:      req.TaskMall,
+		TaskAward:     req.TaskAward,
 	}).InsertAndGetId()
 	if err != nil {
 		return nil, err
@@ -37,7 +38,7 @@ func (c *ControllerV1) AddCronJob(ctx context.Context, req *v1.AddCronJobReq) (r
 	res = &v1.AddCronJobRes{
 		Id: int(insertId),
 	}
-	
+
 	service.Croner().SetupCronJobs()
 
 	return

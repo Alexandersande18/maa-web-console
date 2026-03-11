@@ -2,7 +2,8 @@ const TASK_KEYS_WITH_COMPLEX_SERIALIZATION = [
   "taskRecruit",
   "taskInfrast",
   "taskFight",
-  "taskMall"
+  "taskMall",
+  "taskRoguelike"
 ];
 
 export function formatTimestamp(timestamp) {
@@ -82,6 +83,37 @@ export function processTaskConfig(key, config) {
         cfg.blacklist = [];
       }
       break;
+    case "taskRoguelike":
+      if (typeof cfg.start_foldartal_list === "string" && cfg.start_foldartal_list.trim() !== "") {
+        cfg.start_foldartal_list = cfg.start_foldartal_list
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s !== "");
+      } else {
+        cfg.start_foldartal_list = [];
+      }
+      if (
+        typeof cfg.expected_collapsal_paradigms === "string" &&
+        cfg.expected_collapsal_paradigms.trim() !== ""
+      ) {
+        cfg.expected_collapsal_paradigms = cfg.expected_collapsal_paradigms
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s !== "");
+      } else {
+        cfg.expected_collapsal_paradigms = [];
+      }
+      if (
+        typeof cfg.collectible_mode_start_list === "string" &&
+        cfg.collectible_mode_start_list.trim() !== ""
+      ) {
+        try {
+          cfg.collectible_mode_start_list = JSON.parse(cfg.collectible_mode_start_list);
+        } catch (e) {
+          cfg.collectible_mode_start_list = {};
+        }
+      }
+      break;
     default:
       break;
   }
@@ -129,6 +161,21 @@ export function reverseProcessTaskConfig(key, config) {
       }
       if (Array.isArray(cfg.blacklist)) {
         cfg.blacklist = cfg.blacklist.join(",");
+      }
+      break;
+    case "taskRoguelike":
+      if (Array.isArray(cfg.start_foldartal_list)) {
+        cfg.start_foldartal_list = cfg.start_foldartal_list.join(",");
+      }
+      if (Array.isArray(cfg.expected_collapsal_paradigms)) {
+        cfg.expected_collapsal_paradigms = cfg.expected_collapsal_paradigms.join(",");
+      }
+      if (cfg.collectible_mode_start_list && typeof cfg.collectible_mode_start_list === "object") {
+        try {
+          cfg.collectible_mode_start_list = JSON.stringify(cfg.collectible_mode_start_list);
+        } catch (e) {
+          cfg.collectible_mode_start_list = "{}";
+        }
       }
       break;
     default:

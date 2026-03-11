@@ -18,13 +18,12 @@ import (
 )
 
 var (
-
-	randSeed  = rand.New(rand.NewSource(time.Now().UnixNano()))
+	randSeed = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 type sCroner struct {
-	ctx			gctx.Ctx
-	gcron 		*gcron.Cron
+	ctx   gctx.Ctx
+	gcron *gcron.Cron
 }
 
 func init() {
@@ -49,7 +48,7 @@ func (s *sCroner) ExecCronJob(job *dto.CronJob) error {
 
 	// 根据任务类型执行具体操作
 	g.Log().Infof(s.ctx, "Executing job: %+v, User: %+v", job.Name, uid)
-	
+
 	//停止当前任务
 	if err := service.Maasst().StopTask(uid); err != nil {
 		return err
@@ -57,8 +56,8 @@ func (s *sCroner) ExecCronJob(job *dto.CronJob) error {
 
 	var taskList []dto.Tasker
 	taskList = append(taskList, &dto.TaskStartUp{
-		Enable: true,
-		ClientType: "Official",
+		Enable:           true,
+		ClientType:       "Official",
 		StartGameEnabled: true,
 	})
 	if job.TaskRecruit != nil && job.TaskRecruit.Enable {
@@ -70,6 +69,9 @@ func (s *sCroner) ExecCronJob(job *dto.CronJob) error {
 	if job.TaskFight != nil && job.TaskFight.Enable {
 		taskList = append(taskList, job.TaskFight)
 	}
+	if job.TaskRoguelike != nil && job.TaskRoguelike.Enable {
+		taskList = append(taskList, job.TaskRoguelike)
+	}
 	if job.TaskMall != nil && job.TaskMall.Enable {
 		taskList = append(taskList, job.TaskMall)
 	}
@@ -77,10 +79,10 @@ func (s *sCroner) ExecCronJob(job *dto.CronJob) error {
 		taskList = append(taskList, job.TaskAward)
 	}
 	taskList = append(taskList, &dto.TaskCloseDown{
-		Enable: true,
+		Enable:     true,
 		ClientType: "Official",
 	})
-	
+
 	return service.Maasst().LinkStart(uid, taskList)
 }
 
@@ -132,10 +134,10 @@ func (s *sCroner) SetupCronJobs() {
 			[秒] [分] [时] [日] [月] [周]
 			示例：每天10点30分15秒执行 -> "15 30 10 * * *"
 		*/
-		cronPattern := fmt.Sprintf("%d %d %d * * *", 
-			randSecond,      // 秒（0-59）
-			adjustedMinute,  // 分（0-59）
-			adjustedHour,    // 时（0-23）
+		cronPattern := fmt.Sprintf("%d %d %d * * *",
+			randSecond,     // 秒（0-59）
+			adjustedMinute, // 分（0-59）
+			adjustedHour,   // 时（0-23）
 		)
 
 		// 克隆job对象用于闭包
@@ -146,7 +148,7 @@ func (s *sCroner) SetupCronJobs() {
 			if err := s.ExecCronJob(currentJob); err != nil {
 				g.Log().Errorf(ctx, "执行定时任务失败 | 名称:%s | 错误:%v", currentJob.Name, err)
 			}
-		},  cronJob.Name)
+		}, cronJob.Name)
 
 		if err != nil {
 			g.Log().Errorf(s.ctx, "添加定时任务失败 | 名称:%s | 表达式:%s | 错误:%v",

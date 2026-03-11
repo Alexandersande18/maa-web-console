@@ -19,6 +19,7 @@ type CronJob struct {
 	TaskRecruit    string      `json:"taskRecruit"    orm:"task_recruit"     description:"公招任务配置"`           // 公招任务配置
 	TaskInfrast    string      `json:"taskInfrast"    orm:"task_infrast"     description:"基建任务配置"`           // 基建任务配置
 	TaskFight      string      `json:"taskFight"      orm:"task_fight"       description:"刷理智任务配置"`          // 刷理智任务配置
+	TaskRoguelike  string      `json:"taskRoguelike"  orm:"task_roguelike"   description:"肉鸽任务配置"`           // 肉鸽任务配置
 	TaskMall       string      `json:"taskMall"       orm:"task_mall"        description:"购物任务配置"`           // 购物任务配置
 	TaskAward      string      `json:"taskAward"      orm:"task_award"       description:"领奖励任务配置"`          // 领奖励任务配置
 	CreatedAt      *gtime.Time `json:"createdAt"      orm:"created_at"       description:"创建时间"`             // 创建时间

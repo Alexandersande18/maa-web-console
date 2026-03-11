@@ -45,12 +45,12 @@
               <input type="number" v-model="localConfig[key]" />
             </div>
             <div
-              v-else-if="['facility', 'buy_first', 'blacklist', 'select', 'confirm', 'first_tags'].includes(key)"
+              v-else-if="['facility', 'buy_first', 'blacklist', 'select', 'confirm', 'first_tags', 'start_foldartal_list', 'expected_collapsal_paradigms'].includes(key)"
               class="input-wrapper"
             >
               <textarea v-model="localConfig[key]" rows="2"></textarea>
             </div>
-            <div v-else-if="['drops', 'recruitment_time'].includes(key)" class="input-wrapper">
+            <div v-else-if="['drops', 'recruitment_time', 'collectible_mode_start_list'].includes(key)" class="input-wrapper">
               <textarea v-model="localConfig[key]" rows="4"></textarea>
             </div>
             <div v-else class="input-wrapper">

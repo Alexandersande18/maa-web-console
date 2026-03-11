@@ -29,6 +29,7 @@ type CronJobColumns struct {
 	TaskRecruit    string // 公招任务配置
 	TaskInfrast    string // 基建任务配置
 	TaskFight      string // 刷理智任务配置
+	TaskRoguelike  string // 肉鸽任务配置
 	TaskMall       string // 购物任务配置
 	TaskAward      string // 领奖励任务配置
 	CreatedAt      string // 创建时间
@@ -48,6 +49,7 @@ var cronJobColumns = CronJobColumns{
 	TaskRecruit:    "task_recruit",
 	TaskInfrast:    "task_infrast",
 	TaskFight:      "task_fight",
+	TaskRoguelike:  "task_roguelike",
 	TaskMall:       "task_mall",
 	TaskAward:      "task_award",
 	CreatedAt:      "created_at",

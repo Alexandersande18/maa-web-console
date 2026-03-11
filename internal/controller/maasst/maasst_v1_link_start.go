@@ -2,7 +2,7 @@ package maasst
 
 import (
 	"context"
-	"maa-backend/api/maasst/v1"
+	v1 "maa-backend/api/maasst/v1"
 	"maa-backend/internal/middleware"
 	"maa-backend/internal/model/dto"
 	"maa-backend/internal/service"
@@ -15,8 +15,8 @@ func (c *ControllerV1) LinkStart(ctx context.Context, req *v1.LinkStartReq) (res
 	var taskList []dto.Tasker
 	res = &v1.LinkStartRes{}
 	taskList = append(taskList, &dto.TaskStartUp{
-		Enable: true,
-		ClientType: "Official",
+		Enable:           true,
+		ClientType:       "Official",
 		StartGameEnabled: true,
 	})
 	if req.TaskRecruit != nil && req.TaskRecruit.Enable {
@@ -28,6 +28,9 @@ func (c *ControllerV1) LinkStart(ctx context.Context, req *v1.LinkStartReq) (res
 	if req.TaskFight != nil && req.TaskFight.Enable {
 		taskList = append(taskList, req.TaskFight)
 	}
+	if req.TaskRoguelike != nil && req.TaskRoguelike.Enable {
+		taskList = append(taskList, req.TaskRoguelike)
+	}
 	if req.TaskMall != nil && req.TaskMall.Enable {
 		taskList = append(taskList, req.TaskMall)
 	}
@@ -35,7 +38,7 @@ func (c *ControllerV1) LinkStart(ctx context.Context, req *v1.LinkStartReq) (res
 		taskList = append(taskList, req.TaskAward)
 	}
 	taskList = append(taskList, &dto.TaskCloseDown{
-		Enable: true,
+		Enable:     true,
 		ClientType: "Official",
 	})
 

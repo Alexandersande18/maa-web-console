@@ -83,6 +83,44 @@ export const TASK_TEMPLATE = {
       specialaccess: true
     },
     configSummary: ""
+  },
+  taskRoguelike: {
+    label: "无限刷肉鸽",
+    enable: false,
+    config: {
+      theme: "Phantom",
+      mode: 0,
+      squad: "指挥分队",
+      roles: "取长补短",
+      core_char: "",
+      use_support: false,
+      use_nonfriend_support: false,
+      starts_count: 2147483647,
+      difficulty: 0,
+      stop_at_final_boss: false,
+      stop_at_max_level: false,
+      investment_enabled: true,
+      investments_count: 2147483647,
+      stop_when_investment_full: false,
+      investment_with_more_score: false,
+      start_with_elite_two: false,
+      only_start_with_elite_two: false,
+      refresh_trader_with_dice: false,
+      first_floor_foldartal: "",
+      start_foldartal_list: "",
+      use_foldartal: true,
+      check_collapsal_paradigms: false,
+      double_check_collapsal_paradigms: true,
+      expected_collapsal_paradigms: "目空一些,睁眼瞎,图像损坏,一抹黑",
+      monthly_squad_auto_iterate: false,
+      monthly_squad_check_comms: false,
+      deep_exploration_auto_iterate: false,
+      collectible_mode_shopping: false,
+      collectible_mode_squad: "",
+      collectible_mode_start_list: "{}",
+      start_with_seed: false
+    },
+    configSummary: ""
   }
 };
 
@@ -210,6 +248,65 @@ export const FIELD_CONFIG = {
     orundum: { label: "合成玉" },
     mining: { label: "开采许可" },
     specialaccess: { label: "月卡奖励" }
+  },
+  taskRoguelike: {
+    theme: {
+      label: "主题",
+      type: "select",
+      options: {
+        Phantom: "傀影与猩红孤钻",
+        Mizuki: "水月与深蓝之树",
+        Sami: "探索者的银凇止境",
+        Sarkaz: "萨卡兹的无终奇语",
+        JieGarden: "界园"
+      }
+    },
+    mode: {
+      label: "作战模式",
+      type: "select",
+      options: {
+        "0": "0 - 刷分",
+        "1": "1 - 刷锭",
+        "2": "2 - 已弃用",
+        "3": "3 - 开发中",
+        "4": "4 - 凹开局",
+        "5": "5 - 坍缩范式",
+        "6": "6 - 月度小队",
+        "7": "7 - 深入调查"
+      }
+    },
+    squad: { label: "开局分队" },
+    roles: { label: "职业组合" },
+    core_char: { label: "核心干员名称" },
+    use_support: { label: "使用助战" },
+    use_nonfriend_support: { label: "允许非好友助战" },
+    starts_count: { label: "开始探索次数上限" },
+    difficulty: { label: "指定难度等级" },
+    stop_at_final_boss: { label: "最终关卡前停止" },
+    stop_at_max_level: { label: "满级后停止" },
+    investment_enabled: { label: "启用投资" },
+    investments_count: { label: "投资次数上限" },
+    stop_when_investment_full: { label: "投资满后停止" },
+    investment_with_more_score: { label: "投资后购物" },
+    start_with_elite_two: { label: "凹精二开局" },
+    only_start_with_elite_two: { label: "仅精二开局" },
+    refresh_trader_with_dice: { label: "骰子刷新商店" },
+    first_floor_foldartal: { label: "首层密文板" },
+    start_foldartal_list: { label: "开局密文板列表", hint: "逗号分隔，例如：板A,板B" },
+    use_foldartal: { label: "使用密文板" },
+    check_collapsal_paradigms: { label: "检测坍缩范式" },
+    double_check_collapsal_paradigms: { label: "坍缩范式防漏检测" },
+    expected_collapsal_paradigms: { label: "期望坍缩范式", hint: "逗号分隔" },
+    monthly_squad_auto_iterate: { label: "月度小队自动迭代" },
+    monthly_squad_check_comms: { label: "检查月度通信" },
+    deep_exploration_auto_iterate: { label: "深入调查自动迭代" },
+    collectible_mode_shopping: { label: "烧水模式购物" },
+    collectible_mode_squad: { label: "烧水模式分队" },
+    collectible_mode_start_list: {
+      label: "烧水期望奖励",
+      hint: 'JSON 格式，例如：{"hot_water":true,"ingot":true}'
+    },
+    start_with_seed: { label: "使用种子刷钱" }
   }
 };
 
