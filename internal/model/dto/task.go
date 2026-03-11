@@ -163,7 +163,7 @@ type TaskFight struct {
 	ExpiringMedicine int             `json:"expiring_medicine" v:"min:0"           d:"0"                                                                     dc:"最大使用临期理智药数量"`
 	Stone            int             `json:"stone"             v:"min:0"           d:"0"                                                                     dc:"最大吃石头数量"`
 	Times            int             `json:"times"             v:"min:-1"          d:"-1"                                                                    dc:"执行次数，2147483647表示无限"`
-	Series           int             `json:"series"            v:"min:1|max:6"     d:"1"                                                                     dc:"连战次数，范围1-6"`
+	Series           int             `json:"series"            v:"min:0|max:6"     d:"1"                                                                     dc:"连战次数，范围0-6"`
 	Drops            map[string]int  `json:"drops"             v:""                d:""                                                                      dc:"掉落数量限制，满足任一即停"`
 	ReportToPenguin  bool            `json:"report_to_penguin" v:""                d:"false"                                                                 dc:"是否上报企鹅数据"`
 	PenguinID        string          `json:"penguin_id"        v:"required-if:ReportToPenguin,true" d:""                                                    dc:"企鹅数据ID，上报时必填"`

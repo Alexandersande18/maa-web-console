@@ -78,6 +78,7 @@ func (m *Maa) initasst() (err error) {
 	if err != nil {
 		return
 	}
+	log.Println(cfg.ADBPath, cfg.ADBAddress, cfg.ADBType, cfg.UserDir)
 	err = m.AsstConnect(cfg.ADBPath, cfg.ADBAddress, cfg.ADBType, cfg.UserDir)
 	if err != nil {
 		return
@@ -117,11 +118,19 @@ func (m *Maa) asstLoadResource(path string) error {
 		"r1":   r1,
 		"err":  err,
 	}).Println("asstLoadResource")
-	if !errors.Is(err, syscall.Errno(0)) {
-		return ErrorAsstLoadSource
-	}
+	// 4-1 先看 syscall 返回值
 	if r1 == 0 {
 		return ErrorMAAFalse
+	}
+
+	// 4-2 再看 GetLastError，但忽略 ERROR_FILE_NOT_FOUND(2)
+	if err != nil {
+		var errno syscall.Errno
+		if errors.As(err, &errno) && errno != syscall.ERROR_FILE_NOT_FOUND {
+			// 不是“找不到文件”这一条，则认为是真的系统错误
+			return ErrorAsstLoadSource
+		}
+		// 否则忽略
 	}
 	return nil
 }

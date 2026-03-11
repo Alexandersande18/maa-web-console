@@ -268,7 +268,7 @@ export default {
             label: "执行次数",
             hint: "2147483647表示无限，刷到理智不够"
           },
-          series: { label: "连战次数" },
+          series: { label: "连战次数", hint:"0~6, 0为自动切换为当前可用的最大次数, 如当前理智不够6次, 则选择最低可用次数", },
           drops: { label: "掉落限制", hint: "JSON格式，例如：{\"30011\":5}" },
           report_to_penguin: { label: "上报企鹅物流" },
           penguin_id: { label: "企鹅物流ID" },

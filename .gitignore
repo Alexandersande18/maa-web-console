@@ -19,3 +19,4 @@ bin
 **/config/config.yaml
 main
 hack/config.yaml
+debug/
