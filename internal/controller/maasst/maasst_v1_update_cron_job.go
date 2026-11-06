@@ -5,6 +5,7 @@ import (
 
 	v1 "maa-backend/api/maasst/v1"
 	"maa-backend/internal/dao"
+	"maa-backend/internal/middleware"
 	"maa-backend/internal/model/do"
 	"maa-backend/internal/service"
 )
@@ -21,7 +22,7 @@ func (c *ControllerV1) UpdateCronJob(ctx context.Context, req *v1.UpdateCronJobR
 		TaskAward:     req.TaskAward,
 		Name:          req.Name,
 		IsTemplate:    req.IsTemplate,
-	}).WherePri(req.Id).Update()
+	}).WherePri(req.Id).Where("username", ctx.Value(middleware.CtxUsername)).Update()
 	if err != nil {
 		return
 	}

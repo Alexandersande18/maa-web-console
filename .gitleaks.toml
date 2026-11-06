@@ -1,0 +1,29 @@
+title = "MAA publication checks"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "maa-mysql-password"
+description = "MySQL credentials in GoFrame connection strings"
+regex = '''mysql:[^:\s"']+:([^@\s"']+)@'''
+secretGroup = 1
+[[rules.allowlists]]
+regexTarget = "secret"
+regexes = ['''^CHANGE_ME$''']
+
+[[rules]]
+id = "maa-hardcoded-login-token"
+description = "Login tokens embedded in a controller map"
+path = '''internal/controller/maasst/.*login.*\.go'''
+regex = '''"([^"\r\n]+)"\s*:\s*"[^"\r\n]+"'''
+secretGroup = 1
+[[rules.allowlists]]
+regexTarget = "secret"
+regexes = ['''^REDACTED_CREDENTIAL_[0-9]+$''']
+
+[[rules]]
+id = "maa-fixed-jwt-key"
+description = "Legacy hardcoded JWT signing key"
+regex = '''JwtSecretKey\s*=\s*"([^"\r\n]+)"'''
+secretGroup = 1

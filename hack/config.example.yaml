@@ -1,0 +1,6 @@
+# Optional GoFrame code-generation configuration. Copy to config.yaml locally.
+gfcli:
+  gen:
+    dao:
+      - link: "mysql:maa:CHANGE_ME@tcp(127.0.0.1:3306)/maa"
+        descriptionTag: true

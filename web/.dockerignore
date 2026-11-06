@@ -1,0 +1,8 @@
+# Allow only public frontend build artifacts and nginx templates into the image.
+**
+!Dockerfile
+!withcert.dockerfile
+!nginx.conf
+!nginx.tls.conf.example
+!dist/
+!dist/**

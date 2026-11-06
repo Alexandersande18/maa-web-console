@@ -121,7 +121,10 @@ func TestLoad(t *testing.T) {
 	if os.Getenv("MAA_INTEGRATION_TEST") != "1" {
 		t.Skip("requires MAA_INTEGRATION_TEST=1 and a connected emulator")
 	}
-	dllPath := `C:/MAA`
+	dllPath := os.Getenv("MAA_DLL_PATH")
+	if dllPath == "" {
+		t.Fatal("set MAA_DLL_PATH to the full path of MaaCore.dll")
+	}
 
 	// 使用 LoadLibraryEx 加载 DLL
 	handle, err := windows.LoadLibraryEx(

@@ -2,15 +2,15 @@ package maasst
 
 import (
 	"context"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
+	"github.com/gorilla/websocket"
 	v1 "maa-backend/api/maasst/v1"
 	"maa-backend/internal/middleware"
 	"maa-backend/internal/service"
 	"net/http"
 	"time"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/gtime"
-	"github.com/gogf/gf/v2/util/gconv"
-	"github.com/gorilla/websocket"
 )
 
 func (c *ControllerV1) LogsWS(ctx context.Context, req *v1.LogsWSReq) (res *v1.LogsWSRes, err error) {
@@ -18,10 +18,7 @@ func (c *ControllerV1) LogsWS(ctx context.Context, req *v1.LogsWSReq) (res *v1.L
 	g.Log().Info(ctx, "WebSocket 连接成功")
 	// 升级 HTTP 请求为 WebSocket 连接
 	upgrader := websocket.Upgrader{
-		// 此处简单允许所有来源，实际生产环境请根据需要进行校验
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
+		// The default origin check permits same-host browser connections.
 	}
 	conn, err := upgrader.Upgrade(r.Response.Writer, r.Request, nil)
 	if err != nil {
@@ -38,7 +35,7 @@ func (c *ControllerV1) LogsWS(ctx context.Context, req *v1.LogsWSReq) (res *v1.L
 		r.Response.WriteStatus(http.StatusInternalServerError)
 		return
 	}
-	
+
 	// 创建日志客户端，复用你原来 SSE 客户端相关逻辑
 	clientId := gconv.String(gtime.TimestampNano())
 	client, err := service.Maasst().NewSSEClient(username, clientId)

@@ -1,0 +1,9 @@
+# Historical standalone prototype only; see the root README for the maintained app.
+asst:
+  adbaddress: "127.0.0.1:16384"
+  adbpath: 'C:\platform-tools\adb.exe'
+  adbtype: "BlueStacks"
+  resourcespath: 'C:\MAA'
+http:
+  host: "127.0.0.1"
+  port: 8080

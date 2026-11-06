@@ -6,6 +6,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
+	"maa-backend/internal/auth"
 	"maa-backend/internal/controller/maasst"
 	maalogic "maa-backend/internal/logic/maa"
 	"maa-backend/internal/middleware"
@@ -45,6 +46,9 @@ var (
 		Usage: "main",
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
+			if err = auth.Initialize(ctx); err != nil {
+				return err
+			}
 			if err = maalogic.Initialize(); err != nil {
 				return err
 			}

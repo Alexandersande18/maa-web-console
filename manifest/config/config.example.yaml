@@ -1,0 +1,41 @@
+# Copy to config.yaml. Local configuration is excluded from Git.
+server:
+  address: "127.0.0.1:5244"
+  # Enable only on a trusted development network when needed:
+  # openapiPath: "/api.json"
+  # swaggerPath: "/swagger"
+  accessLogEnabled: false
+  errorStack: false
+  dumpRouterMap: false
+
+logger:
+  path: "./.logs"
+  file: "{Y-m-d}.log"
+  level: "info"
+  stdout: true
+
+auth:
+  # Generate independent random values (32+ bytes); empty values refuse startup.
+  # Environment overrides: MAA_JWT_SECRET and MAA_LOGIN_TOKENS (JSON object).
+  jwtsecret: ""
+  users:
+    - username: "demo" # Must match maa.asst[].id
+      token: ""
+
+maa:
+  tasktimeout: "2h"
+  stoptimeout: "30s"
+  userdir: ".runtime/maa"
+  asst:
+    - id: "demo"
+      adbaddress: "127.0.0.1:16384"
+      adbpath: 'C:\platform-tools\adb.exe'
+      adbtype: "BlueStacks" # Use the connection profile supported by your MaaCore.
+      resourcepath: 'C:\MAA' # Contains MaaCore.dll and resource/.
+      clienttype: "Official"
+
+# Create the database and a restricted application account first.
+# Replace the placeholder before starting. Never use the root database account.
+database:
+  default:
+    - link: "mysql:maa:CHANGE_ME@tcp(127.0.0.1:3306)/maa?charset=utf8mb4&parseTime=true&loc=Local"

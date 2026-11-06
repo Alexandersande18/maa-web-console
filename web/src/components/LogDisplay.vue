@@ -37,7 +37,8 @@ export default {
       return;
     }
 
-    const wsUrl = `ws://${window.location.host}/maasst/logs-ws?token=${token}`;
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/maasst/logs-ws?token=${encodeURIComponent(token)}`;
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
