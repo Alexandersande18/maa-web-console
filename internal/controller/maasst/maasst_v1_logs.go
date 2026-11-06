@@ -15,7 +15,6 @@ import (
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
-
 func Logs(ctx context.Context, r *ghttp.Request) {
 
 }
@@ -42,24 +41,27 @@ func (c *ControllerV1) Logs(ctx context.Context, req *v1.LogsReq) (res *v1.LogsR
 		return
 	}
 	defer service.Maasst().DeleteSSEClient(username, clientId)
-		// 保持连接
+	// 保持连接
 	g.Log().Info(ctx, "SSE client created: ", clientId)
-	
+
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
-		for {
-			select {
-			case <-r.Context().Done():
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			// 发送心跳
+			r.Response.Write("event: heartbeat\ndata: {}\n\n")
+			r.Response.Flush()
+		case msg, ok := <-client.Ch:
+			if !ok {
 				return
-			case <-ticker.C:
-				// 发送心跳
-				r.Response.Write("event: heartbeat\ndata: {}\n\n")
-				r.Response.Flush()
-			case msg := <-client.Ch:
-				// 发送日志消息
-				data, _ := gjson.Encode(msg)
-				r.Response.Writef("data: %s\n\n", data)
-				r.Response.Flush()
 			}
+			// 发送日志消息
+			data, _ := gjson.Encode(msg)
+			r.Response.Writef("data: %s\n\n", data)
+			r.Response.Flush()
 		}
+	}
 }

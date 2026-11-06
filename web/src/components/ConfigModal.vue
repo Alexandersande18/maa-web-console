@@ -30,19 +30,19 @@
             <small v-if="fieldConfig[key] && fieldConfig[key].hint" class="hint-text">
               {{ fieldConfig[key].hint }}
             </small>
-            <div v-if="fieldConfig[key] && fieldConfig[key].options" class="input-wrapper">
+            <div v-if="getOptions(key)" class="input-wrapper">
               <select v-model="localConfig[key]">
                 <option
-                  v-for="(optText, optValue) in fieldConfig[key].options"
+                  v-for="(optText, optValue) in getOptions(key)"
                   :key="optValue"
-                  :value="optValue"
+                  :value="typeof value === 'number' ? Number(optValue) : optValue"
                 >
                   {{ optText }}
                 </option>
               </select>
             </div>
             <div v-else-if="typeof value === 'number'" class="input-wrapper">
-              <input type="number" v-model.number="localConfig[key]" :max="getFieldMax(key)" @input="handleNumberInput(key)" />
+              <input type="number" v-model.number="localConfig[key]" :min="fieldConfig[key]?.min" :max="getFieldMax(key)" @input="handleNumberInput(key)" />
             </div>
             <div
               v-else-if="['facility', 'buy_first', 'blacklist', 'select', 'confirm', 'first_tags', 'start_foldartal_list', 'expected_collapsal_paradigms'].includes(key)"
@@ -50,7 +50,7 @@
             >
               <textarea v-model="localConfig[key]" rows="2"></textarea>
             </div>
-            <div v-else-if="['drops', 'recruitment_time', 'collectible_mode_start_list'].includes(key)" class="input-wrapper">
+            <div v-else-if="['drops', 'recruitment_time', 'collectible_mode_start_list', 'collectible_mode_core_char_list'].includes(key)" class="input-wrapper">
               <textarea v-model="localConfig[key]" rows="4"></textarea>
             </div>
             <div v-else class="input-wrapper">
@@ -68,6 +68,9 @@
 </template>
 
 <script>
+import { getFieldOptions, isTaskFieldVisible } from './task-config/taskDefinitions'
+import { processTaskConfig } from './task-config/taskConfigUtils'
+
 export default {
   name: 'ConfigModal',
   props: {
@@ -90,7 +93,7 @@ export default {
       const filteredKeys = new Set(['enable', 'stone', 'report_to_penguin', 'penguin_id', 'server', 'client_type', 'DrGrandet', 'first_floor_foldartal', 'start_foldartal_list', 'use_foldartal', 'check_collapsal_paradigms', 'double_check_collapsal_paradigms', 'expected_collapsal_paradigms', 'collectible_mode_shopping', 'collectible_mode_squad', 'collectible_mode_start_list']);
       let result = {};
       for (const key of Object.keys(this.localConfig)) {
-        if (!filteredKeys.has(key)) {
+        if ((!filteredKeys.has(key) || (key === 'collectible_mode_squad' && this.localConfig.theme === 'BlackFlow')) && isTaskFieldVisible(this.taskKey, key, this.localConfig)) {
           result[key] = this.localConfig[key];
         }
       }
@@ -100,7 +103,16 @@ export default {
       return "配置 " + this.taskKey
     }
   },
+  watch: {
+    'localConfig.theme'() {
+      const options = this.getOptions('mode')
+      if (options && !Object.hasOwn(options, this.localConfig.mode)) this.localConfig.mode = 0
+    }
+  },
   methods: {
+    getOptions(key) {
+      return getFieldOptions(this.taskKey, key, this.localConfig, this.fieldConfig)
+    },
     isBoolean(val) {
       return typeof val === 'boolean'
     },
@@ -110,11 +122,22 @@ export default {
     },
     handleNumberInput(key) {
       const max = this.getFieldMax(key)
+      const min = this.fieldConfig[key]?.min
+      if (typeof min === 'number' && this.localConfig[key] < min) this.localConfig[key] = min
       if (typeof max === 'number' && this.localConfig[key] > max) {
         this.localConfig[key] = max
       }
     },
     closeAndSave() {
+      for (const key of Object.keys(this.localConfig)) {
+        if (typeof this.localConfig[key] === 'number') this.handleNumberInput(key)
+      }
+      try {
+        processTaskConfig(this.taskKey, this.localConfig)
+      } catch (e) {
+        alert('配置错误：' + e.message)
+        return
+      }
       // 自动保存当前配置并通知关闭
       this.$emit('save', this.localConfig)
       this.$emit('close')

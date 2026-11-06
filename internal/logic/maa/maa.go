@@ -1,26 +1,23 @@
 package maa
 
 import (
-	// "MaaAssistantArknights/conf"
 	"context"
 	"errors"
 	"fmt"
-	"os"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
 
-	dto "maa-backend/internal/model/dto"
-
-	"github.com/gogf/gf/v2/frame/g"
 	log "github.com/sirupsen/logrus"
+	"maa-backend/internal/model/dto"
 )
 
 var (
 	ErrorMAAFalse          = errors.New("MAA return false")
 	ErrorAsstCreateEx      = errors.New("AsstCreateEx failed")
-	ErrorAsstLoadSource    = errors.New("AsstLoadSource failed")
+	ErrorAsstLoadSource    = errors.New("AsstLoadResource failed")
 	ErrorAsstConnect       = errors.New("AsstConnect failed")
 	ErrorAsstCreate        = errors.New("AsstCreate failed")
 	ErrorAsstGetVersion    = errors.New("AsstGetVersion failed")
@@ -31,7 +28,12 @@ var (
 	ErrorAsstRunning       = errors.New("AsstRunning failed")
 	ErrorAsstDestroy       = errors.New("AsstDestroy failed")
 	ErrTooLargeAllocation  = errors.New("buffer allocation exceeds maximum limit")
+	// Native control calls are serialized across handles. This does not replace
+	// the queue's exclusion over the entire lifetime of a running task.
+	nativeMu sync.Mutex
 )
+
+const nativeNullSize = ^uintptr(0)
 
 type AsstCallback func(message int, details uintptr, arg uintptr) uintptr
 
@@ -39,389 +41,325 @@ type Maa struct {
 	asstHandle uintptr
 	version    string
 	hooks      []Hook
-	mu         sync.Mutex
+	mu         sync.Mutex // hooks and log subscribers only; never held across native calls
 	cfg        *Asst
-	SSEClients    map[string]*dto.SSEClientConn
+	SSEClients map[string]*dto.SSEClientConn
+	run        *taskRun // guarded by mu; callbacks are delivered on a native message thread
 }
 
-func New(cfg *Asst) (maa *Maa, err error) {
-	if len(cfg.ResourcePath) == 0 {
-		cfg.ResourcePath, err = os.Getwd()
-		if err != nil {
-			return
-		}
+func New(cfg *Asst) (*Maa, error) {
+	if err := initializeRuntime(cfg.ResourcePath, cfg.UserDir, cfg.ClientType); err != nil {
+		return nil, err
 	}
-	maa = &Maa{
-		hooks: make([]Hook, 0),
-		cfg:   cfg,
-		SSEClients:  make(map[string]*dto.SSEClientConn), // 确保map初始化
+	m := &Maa{cfg: cfg, SSEClients: make(map[string]*dto.SSEClientConn)}
+	m.setDefaultHook()
+	if err := m.AsstCreateEx(); err != nil {
+		return nil, err
 	}
-	err = maa.initasst()
-	if err != nil {
-		return
-	}
-	maa.setDefaultHook()
-	return
-}
-
-func (m *Maa) initasst() (err error) {
-	cfg := m.cfg
-	err = newSyscall(cfg.ResourcePath)
-	if err != nil {
-		return
-	}
-	err = m.asstLoadResource(cfg.ResourcePath)
-	if err != nil {
-		return
-	}
-	err = m.AsstCreateEx()
-	if err != nil {
-		return
-	}
-	log.Println(cfg.ADBPath, cfg.ADBAddress, cfg.ADBType, cfg.UserDir)
-	err = m.AsstConnect(cfg.ADBPath, cfg.ADBAddress, cfg.ADBType, cfg.UserDir)
-	if err != nil {
-		return
-	}
-
 	m.SetVersion()
-	return
+	return m, nil
 }
 
-func (m *Maa) callback(message int, details uintptr, arg uintptr) uintptr {
+func (m *Maa) callback(message int, details uintptr, arg uintptr) (result uintptr) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithField("instance", m.cfg.ID).Errorf("MAA callback panic: %v", r)
+		}
+	}()
+	// MaaCore owns details and frees it when this callback returns.
+	detail := CharPtr2String(details)
 	m.mu.Lock()
-	hooks := m.hooks
+	hooks := append([]Hook(nil), m.hooks...)
 	m.mu.Unlock()
 	for _, hook := range hooks {
-		hook.Do(message, CharPtr2String(details), arg)
+		hook.Do(message, detail, arg)
 	}
 	return 0
 }
 
 func (m *Maa) AppendHook(hooks ...Hook) {
-	if len(hooks) == 0 {
-		return
-	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.hooks = append(m.hooks, hooks...)
 }
+func (m *Maa) setDefaultHook() { m.AppendHook(&TaskCallback{Instance: m}) }
+
+// callStrings retains typed heap pointers until the DLL call finishes. Never
+// return just a uintptr to Go memory from a conversion helper.
+func callStrings(fn procCall, prefix []uintptr, values ...string) (uintptr, error) {
+	pointers := make([]*byte, len(values))
+	args := append([]uintptr(nil), prefix...)
+	for i, value := range values {
+		p, err := bytePtrFromString(value)
+		if err != nil {
+			return 0, err
+		}
+		pointers[i] = p
+		args = append(args, uintptr(unsafe.Pointer(p)))
+	}
+	r, _, _ := fn(args...)
+	runtime.KeepAlive(pointers)
+	return r, nil // MaaCore uses its return value, not Windows GetLastError.
+}
 
 func (m *Maa) asstLoadResource(path string) error {
-	a1, err := UintPtrFromString(path)
-	if err != nil {
-		return err
-	}
-	r1, _, err := asstLoadResource(a1)
-	log.WithFields(log.Fields{
-		"path": path,
-		"r1":   r1,
-		"err":  err,
-	}).Println("asstLoadResource")
-	// 4-1 先看 syscall 返回值
-	if r1 == 0 {
-		return ErrorMAAFalse
-	}
-
-	// 4-2 再看 GetLastError，但忽略 ERROR_FILE_NOT_FOUND(2)
-	if err != nil {
-		var errno syscall.Errno
-		if errors.As(err, &errno) && errno != syscall.ERROR_FILE_NOT_FOUND {
-			// 不是“找不到文件”这一条，则认为是真的系统错误
-			return ErrorAsstLoadSource
-		}
-		// 否则忽略
-	}
-	return nil
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	return loadResource(path)
 }
-
 func (m *Maa) AsstCreateEx() error {
-	a1 := syscall.NewCallback(m.callback)
-	a2 := uintptr(0) // 这里的arg之后看有没有需要再更新
-	r1, _, err := asstCreateEx(a1, a2)
-
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("AsstCreateEx")
-
-	if !errors.Is(err, syscall.Errno(0)) {
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	r, _, _ := asstCreateEx(syscall.NewCallback(m.callback), 0)
+	if r == 0 {
 		return ErrorAsstCreateEx
 	}
-	m.asstHandle = r1
+	m.asstHandle = r
 	return nil
 }
-
 func (m *Maa) AsstCreate() error {
-	r1, _, err := asstCreate()
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("AsstCreate")
-	if !errors.Is(err, syscall.Errno(0)) {
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	r, _, _ := asstCreate()
+	if r == 0 {
 		return ErrorAsstCreate
 	}
-	m.asstHandle = r1
+	m.asstHandle = r
 	return nil
 }
-
-func (m *Maa) AsstConnect(path string, address string, config string, usrdir string) error {
-	fmt.Println("adb start connect")
-	a1, err := UintPtrFromString(path)
+func (m *Maa) AsstConnect(path, address, config, usrdir string) error {
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	// AsstSetUserDir is global and is set once, before resource loading.
+	r, err := callStrings(asstConnect, []uintptr{m.asstHandle}, path, address, config)
 	if err != nil {
 		return err
 	}
-	a2, err := UintPtrFromString(address)
-	if err != nil {
-		return err
-	}
-	a3, err := UintPtrFromString(config)
-	if err != nil {
-		return err
-	}
-	a4, err := UintPtrFromString(usrdir)
-	if err != nil {
-		return err
-	}
-	r0, _, err := asstSetUserDir(m.asstHandle, a4)
-	log.WithFields(log.Fields{
-		"r0":  r0,
-		"err": err,
-	}).Println("AsstSetUserDir")
-	r1, _, err := asstConnect(m.asstHandle, a1, a2, a3)
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("AsstConnect")
-
-	if r1 == 0 {
+	if r == 0 {
 		return ErrorAsstConnect
 	}
 	return nil
 }
-
-func (m *Maa) setDefaultHook() {
-	m.hooks = append(m.hooks, &TaskCallback{
-		Instance: m,
-	})
-}
-
 func (m *Maa) SetVersion() {
-	r1, _, err := asstGetVersion(m.asstHandle)
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("SetVersion")
-	if !errors.Is(err, syscall.Errno(0)) {
-		return
-	}
-	if r1 > 0 {
-		m.version = CharPtr2String(r1)
-	}
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	r, _, _ := asstGetVersion()
+	m.version = CharPtr2String(r)
 }
-
-func (m *Maa) GetVersion() string {
-	return m.version
-}
-
+func (m *Maa) GetVersion() string { return m.version }
 func (m *Maa) AsstAppendTask(typ dto.TaskType, task dto.Tasker) (dto.TaskID, error) {
-	a1, err := UintPtrFromString(typ.String())
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	params := task.Serialize()
+	r, err := callStrings(asstAppendTask, []uintptr{m.asstHandle}, typ.String(), params)
 	if err != nil {
 		return 0, err
 	}
-	
-	a2, err := UintPtrFromString(task.Serialize())
-	if err != nil {
-		return 0, err
+	if int32(r) <= 0 {
+		return 0, fmt.Errorf("%w: type=%s params=%s resource=%s version=%s", ErrorAsstAppendTask, typ, params, m.cfg.ResourcePath, m.version)
 	}
-	r1, _, err := asstAppendTask(m.asstHandle, a1, a2)
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("asstAppendTask")
-	if r1 == 0 {
-		return 0, ErrorAsstAppendTask
-	}
-
-	return dto.TaskID(r1), nil
+	return dto.TaskID(int32(r)), nil
 }
-
-func (m *Maa) AsstSetTaskParams(taskID dto.TaskID, task dto.Tasker) bool {
-	a1 := uintptr(taskID)
-	a2, err := UintPtrFromString(task.Serialize())
-	if err != nil {
-		return false
-	}
-	r1, _, err := asstSetTaskParams(m.asstHandle, a1, a2)
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("AsstSetTaskParams")
-
-	return r1 > 0
+func (m *Maa) AsstSetTaskParams(id dto.TaskID, task dto.Tasker) bool {
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	r, err := callStrings(asstSetTaskParams, []uintptr{m.asstHandle, uintptr(id)}, task.Serialize())
+	return err == nil && r != 0
 }
-
 func (m *Maa) AsstStart() (bool, error) {
-	r1, _, err := asstStart(m.asstHandle)
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("AsstStart")
-	return r1 > 0, err
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	r, _, _ := asstStart(m.asstHandle)
+	if r == 0 {
+		return false, ErrorAsstStart
+	}
+	return true, nil
 }
-
 func (m *Maa) AsstStop() (bool, error) {
-	r1, _, err := asstStop(m.asstHandle)
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("AsstStop")
-
-	return r1 > 0, err
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	r, _, _ := asstStop(m.asstHandle)
+	if r == 0 {
+		return false, ErrorAsstStop
+	}
+	return true, nil
 }
-
 func (m *Maa) AsstRunning() bool {
-	r1, _, err := asstRunning(m.asstHandle)
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("AsstRunning")
-	return r1 > 0
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	r, _, _ := asstRunning(m.asstHandle)
+	return r != 0
 }
-
 func (m *Maa) AsstDestroy() error {
-	r1, _, err := asstDestroy(m.asstHandle)
-	log.WithFields(log.Fields{
-		"r1":  r1,
-		"err": err,
-	}).Println("AsstDestroy")
-	if r1 == 0 {
-		return ErrorAsstDestroy
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	if m.asstHandle != 0 {
+		asstDestroy(m.asstHandle)
+		m.asstHandle = 0
 	}
 	return nil
 }
-
-
 func (m *Maa) GetImage() ([]byte, error) {
-    const (
-        initialBufferSize = 2 * 1920 * 1080 * 4
-        maxBufferSize     = 10 * initialBufferSize
-    )
-    
-    buffSize := initialBufferSize
-    m.GetImageAsync()
-    for {
-        if buffSize > maxBufferSize {
-            return nil, ErrTooLargeAllocation
-        }
-        
-        buffer := make([]byte, buffSize)
-        bufferPtr := unsafe.Pointer(&buffer[0])
-        
-        actualSize, _, err := asstGetImage(
-            m.asstHandle,
-            uintptr(bufferPtr),
-            uintptr(buffSize),
-        )
-        g.Log().Debugf(context.TODO(), "AsstGetImage attempt: buffSize: %d, actualSize: %d, error: %v", buffSize, actualSize, err)
-        
-        // 处理可能的系统错误
-        if err != nil && !errors.Is(err, syscall.Errno(0)) {
-            return nil, fmt.Errorf("system error: %w", err)
-        }
-        
-        // 假设返回0表示缓冲区不足
-        if actualSize == 0 {
-            buffSize *= 2
-            continue
-        }
-        
-        // 返回有效数据（自动截断多余容量）
-        return buffer[:actualSize], nil
-    }
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	r, _, _ := asstAsyncScreencap(m.asstHandle, 1)
+	if int32(r) <= 0 {
+		return nil, errors.New("AsstAsyncScreencap failed")
+	}
+	for size := 8 * 1024 * 1024; size <= 64*1024*1024; size *= 2 {
+		buffer := make([]byte, size)
+		n, _, _ := asstGetImage(m.asstHandle, uintptr(unsafe.Pointer(&buffer[0])), uintptr(size))
+		runtime.KeepAlive(buffer)
+		if n == nativeNullSize {
+			continue
+		}
+		if n == 0 {
+			return nil, errors.New("MAA image is empty")
+		}
+		if n > uintptr(len(buffer)) {
+			return nil, errors.New("invalid image size returned by MaaCore")
+		}
+		return buffer[:int(n)], nil
+	}
+	return nil, ErrTooLargeAllocation
 }
-
 func (m *Maa) GetImageAsync() {
-	callId, _, err := asstAsyncScreencap(m.asstHandle, uintptr(1))
-	log.WithFields(log.Fields{
-		"r1":  callId,
-		"err": err,
-	}).Println("AsstAsyncScreencap")
-	g.Log().Debugf(context.TODO(), "AsstAsyncScreencap callId: %d", callId)
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	asstAsyncScreencap(m.asstHandle, 1)
 }
-
-
 func (m *Maa) GetTasksList() ([]dto.TaskID, error) {
-    // 第一次调用获取任务数量
-    requiredSize, _, err := asstGetTasksList(m.asstHandle, 0, 0)
-    if requiredSize == 0 {
-        return nil, fmt.Errorf("failed to get tasks count: %v", err)
-    }
-
-    // 分配任务ID数组
-    tasks := make([]dto.TaskID, requiredSize)
-    tasksPtr := uintptr(unsafe.Pointer(&tasks[0]))
-
-    // 第二次调用获取实际任务列表
-    actualSize, _, err := asstGetTasksList(m.asstHandle, tasksPtr, uintptr(requiredSize))
-    if actualSize == 0 {
-        return nil, fmt.Errorf("failed to get tasks list: %v", err)
-    }
-
-    return tasks[:actualSize], nil
+	nativeMu.Lock()
+	defer nativeMu.Unlock()
+	// A null buffer returns AsstGetNullSize(), not the required count.
+	for size := 32; size <= 65536; size *= 2 {
+		tasks := make([]dto.TaskID, size) // AsstTaskId is int32, including on amd64.
+		n, _, _ := asstGetTasksList(m.asstHandle, uintptr(unsafe.Pointer(&tasks[0])), uintptr(size))
+		runtime.KeepAlive(tasks)
+		if n == nativeNullSize {
+			continue
+		}
+		if n > uintptr(size) {
+			return nil, errors.New("invalid task count returned by MaaCore")
+		}
+		return tasks[:int(n)], nil
+	}
+	return nil, ErrTooLargeAllocation
 }
-
 func (m *Maa) NewClient(id string) {
-	ch := make(chan dto.Maalog, 10)
-	conn := &dto.SSEClientConn{
-		Ch:        ch,
-		CreatedAt: time.Now(),
+	conn := &dto.SSEClientConn{Ch: make(chan dto.Maalog, 64), CreatedAt: time.Now()}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if old := m.SSEClients[id]; old != nil {
+		close(old.Ch)
 	}
 	m.SSEClients[id] = conn
-	firstMsg := dto.Maalog{
-		Level:    "warn",
-		Timestamp: time.Now().Unix(),
-	}
-	if m.AsstRunning(){
-		firstMsg.Message = "当前有正在运行的任务"
-	} else {
-		firstMsg.Message = "没有正在运行的任务"
-	}
-	conn.Ch <- firstMsg
 }
-
 func (m *Maa) GetClient(id string) *dto.SSEClientConn {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	return m.SSEClients[id]
 }
-
 func (m *Maa) DeleteClient(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	close(m.SSEClients[id].Ch)
-	delete(m.SSEClients, id)
+	if c := m.SSEClients[id]; c != nil {
+		delete(m.SSEClients, id)
+		close(c.Ch)
+	}
 }
-
-func (m *Maa) AppendLog(maalog dto.Maalog) {
+func (m *Maa) AppendLog(entry dto.Maalog) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-    for k, v := range m.SSEClients {
-        if v == nil {
-            g.Log().Error(context.TODO(), "Client is nil", k)
-            continue
-        }
-        // 使用闭包处理panic防止通道关闭导致崩溃
-        func() {
-            defer func() {
-                if r := recover(); r != nil {
-                    g.Log().Errorf(context.TODO(), "Send log to client %s failed: channel already closed", k)
-                }
-            }()
-            select {
-            case v.Ch <- maalog:
-            default:
-                g.Log().Errorf(context.TODO(), "Send log to client %s failed: channel full", k)
-            }
-        }()
-    }
+	for _, c := range m.SSEClients {
+		if c != nil {
+			select {
+			case c.Ch <- entry:
+			default:
+			}
+		}
+	}
+}
+func (m *Maa) Notify(message string) {
+	log.WithField("instance", m.cfg.ID).Info(message)
+	m.AppendLog(dto.Maalog{Level: "info", Message: message, Timestamp: time.Now().Unix()})
 }
 
+// Execute is called exclusively by the global task queue. All work, including
+// connect/resource reload, is included in the task deadline.
+func (m *Maa) Execute(ctx context.Context, tasks []dto.Tasker) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := reloadResources(ctx, m.cfg.ResourcePath, m.cfg.ClientType); err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := m.AsstConnect(m.cfg.ADBPath, m.cfg.ADBAddress, m.cfg.ADBType, ""); err != nil {
+		return err
+	}
+	run := m.beginTaskRun()
+	defer m.endTaskRun(run)
+	for _, task := range tasks {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		id, err := m.AsstAppendTask(task.GetType(), task)
+		if err != nil {
+			return err
+		}
+		m.mu.Lock()
+		run.ids[id] = true
+		m.mu.Unlock()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if _, err := m.AsstStart(); err != nil {
+		return err
+	}
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	var idleSince time.Time
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if !m.AsstRunning() {
+				completed, err := m.taskRunResult(run)
+				if completed {
+					return err
+				}
+				// AsstRunning can become false before the message thread delivers
+				// TaskChainError and AllTasksCompleted. Drain that result first.
+				if idleSince.IsZero() {
+					idleSince = time.Now()
+				} else if time.Since(idleSince) >= 5*time.Second {
+					return errors.Join(err, errors.New("MaaCore stopped without an AllTasksCompleted callback"))
+				}
+			} else {
+				idleSince = time.Time{}
+			}
+		}
+	}
+}
+func (m *Maa) Stop(ctx context.Context) error {
+	if _, err := m.AsstStop(); err != nil {
+		return err
+	}
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if !m.AsstRunning() {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}

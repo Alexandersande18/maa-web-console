@@ -10,12 +10,10 @@ const (
 	null   = 0 //end of c string is 0
 )
 
-func UintPtrFromString(s string) (uintptr, error) {
-	p, err := syscall.BytePtrFromString(s)
-	if err != nil {
-		return 0, err
-	}
-	return uintptr(unsafe.Pointer(p)), nil
+// Keep the typed pointer alive until after the native call. A uintptr alone
+// does not retain the allocation for the garbage collector.
+func bytePtrFromString(s string) (*byte, error) {
+	return syscall.BytePtrFromString(s)
 }
 
 func CharPtr2String(r uintptr) string {
@@ -23,9 +21,10 @@ func CharPtr2String(r uintptr) string {
 		return ""
 	}
 	data := make([]byte, 0)
-	for p := (*byte)(unsafe.Pointer(r)); *p != null; p = (*byte)(unsafe.Pointer(r)) {
+	// The ABI returns a native address as a machine word. Reinterpret that word
+	// once, then retain a typed pointer and use pointer arithmetic (not integers).
+	for p := *(**byte)(unsafe.Pointer(&r)); *p != null; p = (*byte)(unsafe.Add(unsafe.Pointer(p), offset)) {
 		data = append(data, *p)
-		r += offset
 	}
 	return string(data)
 }

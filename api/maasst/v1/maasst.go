@@ -27,7 +27,9 @@ type LinkStartReq struct {
 	TaskAward     *dto.TaskAward     `json:"taskAward" v:""`
 }
 
-type LinkStartRes struct{}
+type LinkStartRes struct {
+	Message string `json:"message"`
+}
 
 type StopTaskReq struct {
 	g.Meta `path:"/maasst/stoptask" Tags:"maasst" method:"post" summary:"StopTaskReq"`

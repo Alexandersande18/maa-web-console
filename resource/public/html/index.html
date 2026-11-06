@@ -278,6 +278,11 @@
             <button class="config-button">配置</button>
             <div class="config-summary"></div>
           </div>
+          <div class="task-item" data-task="taskRoguelike">
+            <span>刷肉鸽</span>
+            <button class="config-button">配置</button>
+            <div class="config-summary"></div>
+          </div>
           <!-- taskAward: 领取奖励 -->
           <div class="task-item" data-task="taskAward">
             <span>领取奖励</span>
@@ -327,138 +332,16 @@
       </div>
     </div>
     
-  <script>
+  <script type="module">
+    import { TASK_TEMPLATE, FIELD_CONFIG, getFieldOptions, isTaskFieldVisible } from './task-config/taskDefinitions.js';
+    import { processTaskConfig } from './task-config/taskConfigUtils.js';
     // 全局保存 JWT token
     let jwtToken = "";
     let logStreamActive = false;
 
-    // 默认任务配置
-    let taskConfigs = {
-      taskRecruit: {
-         refresh: true,
-         select: "3,4,5",
-         confirm: "3,4,5",
-         first_tags: "",
-         extra_tags_mode: 0,
-         times: 4,
-         set_time: true,
-         expedite: false,
-         expedite_times: 0,
-         skip_robot: true,
-         recruitment_time: '{"3":540,"4":540,"5":540,"6":540}',
-         report_to_penguin: false,
-         penguin_id: "",
-         report_to_yituliu: false,
-         yituliu_id: "",
-         server: "CN"
-      },
-      taskInfrast: {
-        mode: 0,
-        facility: "Mfg,Trade,Power,Control,Reception,Office,Dorm", 
-        drones: "Money",
-        threshold: 0.3,
-        replenish: false,
-        dorm_notstationed_enabled: true,
-        dorm_trust_enabled: true,
-        filename: "",
-        plan_index: 0
-      },
-      taskFight: {
-        stage: "",
-        medicine: 0,
-        expiring_medicine: 0,
-        stone: 0,
-        times: 2147483647,
-        series: 2,
-        drops: "{}",
-        report_to_penguin: false,
-        penguin_id: "",
-        server: "CN",
-        client_type: "Official",
-        DrGrandet: false
-      },
-      taskMall: {
-        shopping: true,
-        visit_friends: true,
-        buy_first: "招聘许可,龙门币",
-        blacklist: "",
-        force_shopping_if_credit_full: true,
-        only_buy_discount: false,
-        reserve_max_credit: false
-      },
-      taskAward: {
-        award: true,
-        mail: true,
-        recruit: true,
-        orundum: true,
-        mining: true,
-        specialaccess: true
-      }
-    };
-
-    // 字段中文映射及配置
-    const fieldConfig = {
-      taskRecruit: {
-        refresh: { label: "如果是三星Tag则继续尝试刷新" },
-        select: { label: "会自动点击的点击标签等级", hint: "多个标签用逗号分隔，例如:3,4" },
-        confirm: { label: "会自动确认的标签等级", hint: "多个标签用逗号分隔" },
-        first_tags: { label: "偏好标签", hint: "仅在标签等级为3时有效，多个标签用逗号分隔" },
-        extra_tags_mode: { label: "额外标签模式", type: "select", options: {"0": "默认行为（0）", "1": "选3个标签（1）", "2": "组合高星标签（2）"} },
-        times: { label: "执行招募的次数", hint: "0表示仅公招计算" },
-        set_time: { label: "设置招募时间" },
-        expedite: { label: "使用加急许可" },
-        expedite_times: { label: "加急次数", hint: "仅在使用加急许可时有效" },
-        skip_robot: { label: "跳过机器人标签" },
-        recruitment_time: { label: "招募时限（分钟）", hint: "JSON 格式，例如: {\"3\":540, \"4\":540, \"5\":540, \"6\":540}" },
-        report_to_penguin: { label: "汇报企鹅物流数据" },
-        penguin_id: { label: "企鹅物流数据ID" },
-        report_to_yituliu: { label: "汇报一图流数据" },
-        yituliu_id: { label: "一图流数据ID" },
-        server: { label: "服务器", type: "select", options: {"CN": "国服","US": "美服","JP": "日服","KR": "韩服"} }
-      },
-      taskInfrast: {
-        mode: { label: "模式", type: "select", options: {"0":"智能换班（0）","10000":"自定义方案（10000）"} },
-        facility: { label: "换班设施", hint: "逗号分隔，例如：Mfg,Trade" },
-        drones: { label: "无人机用途", type: "select", options: {"_NotUse":"不使用","Money":"龙门币","SyntheticJade":"合成玉"} },
-        threshold: { label: "心情阈值" },
-        replenish: { label: "贸易站源石碎片是否自动补货" },
-        dorm_notstationed_enabled: { label: "是否启用宿舍未进驻选项" },
-        dorm_trust_enabled: { label: "是否将宿舍剩余位置填入信赖未满干员" },
-        filename: { label: "配置文件路径" },
-        plan_index: { label: "方案序号" }
-      },
-      taskFight: {
-        stage: { label: "关卡名称", hint: "关卡名，为空则识别当前/上次的关卡。支持全部主线关卡，如 1-7、S3-2等可在关卡结尾输入Normal/Hard表示需要切换标准与磨难难度，剿灭作战输入Annihilation"},
-        medicine: { label: "最大使用理智药数量" },
-        expiring_medicine: { label: "最大使用临期理智药数量" },
-        stone: { label: "最大吃源石数量" },
-        times: { label: "执行次数", hint: "2147483647表示无限，刷到理智不够" },
-        series: { label: "连战次数" },
-        drops: { label: "掉落限制", hint: "JSON格式，例如：{\"30011\":5}" },
-        report_to_penguin: { label: "上报企鹅物流" },
-        penguin_id: { label: "企鹅物流ID" },
-        server: { label: "服务器", type: "select", options: {"CN":"国服","US":"美服","JP":"日服","KR":"韩服"} },
-        client_type: { label: "客户端", type: "select", options: {"Official":"官服","Bilibili":"B服","txwy":"渠道服"} },
-        DrGrandet: { label: "智能碎石" }
-      },
-      taskMall: {
-        shopping: { label: "执行购物" },
-        visit_friends: { label: "访问好友" },
-        buy_first: { label: "优先购买", hint: "逗号分隔商品" },
-        blacklist: { label: "黑名单", hint: "逗号分隔商品" },
-        force_shopping_if_credit_full: { label: "是否在信用溢出时无视黑名单" },
-        only_buy_discount: { label: "仅购折扣" },
-        reserve_max_credit: { label: "保留信用" }
-      },
-      taskAward: {
-        award: { label: "任务奖励" },
-        mail: { label: "邮件奖励" },
-        recruit: { label: "公招奖励" },
-        orundum: { label: "合成玉" },
-        mining: { label: "开采许可" },
-        specialaccess: { label: "月卡奖励" }
-      }
-    };
+    // 与 Vue 前端共用任务参数、上限及序列化逻辑。
+    const taskConfigs = Object.fromEntries(Object.entries(TASK_TEMPLATE).map(([key, task]) => [key, JSON.parse(JSON.stringify(task.config))]));
+    const fieldConfig = FIELD_CONFIG;
 
     // 页面切换函数
     function showLoginPage(){
@@ -513,43 +396,17 @@
     // Linkstart 按钮事件
     document.getElementById("linkstart-button").addEventListener("click", async function(){
       const body = {};
+      try {
       // 遍历每个任务项，如果选中则将配置加入请求体
       document.querySelectorAll(".task-item").forEach(item => {
         const taskName = item.getAttribute("data-task");
         if(item.classList.contains("selected")){
           // 复制对应任务的配置
-          const config = Object.assign({}, taskConfigs[taskName]);
-          if(taskName === "taskInfrast"){
-            // facility 字符串转换为数组
-            config.facility = config.facility.split(',').map(s => s.trim()).filter(s => s);
-          }
-          if(taskName === "taskFight"){
-            try {
-              config.drops = JSON.parse(config.drops);
-            } catch(e) {
-              config.drops = {};
-            }
-          }
-          if(taskName === "taskMall"){
-            config.buy_first = config.buy_first.split(',').map(s => s.trim()).filter(s => s);
-            config.blacklist = config.blacklist.split(',').map(s => s.trim()).filter(s => s);
-          }
-          if(taskName === "taskRecruit"){
-            // 将逗号分隔的字符串转换为数组
-            config.select = config.select.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-            config.confirm = config.confirm.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-            config.first_tags = config.first_tags.split(',').map(s => s.trim()).filter(s => s);
-            try {
-              config.recruitment_time = JSON.parse(config.recruitment_time);
-            } catch(e) {
-              config.recruitment_time = {"3":540, "4":540, "5":540, "6":540};
-            }
-          }
+          const config = processTaskConfig(taskName, taskConfigs[taskName]);
           config.enable = true;
           body[taskName] = config;
         }
       });
-      try {
         const response = await fetch('/maasst/linkstart', {
           method: 'POST',
           headers: { 
@@ -573,7 +430,7 @@
   
         const result = await response.json();
         if (result.code === 0) {
-          alert("Linkstart 启动成功");
+          alert(result.data?.message || "任务已加入队列，将按顺序执行");
         } else {
           alert(`操作失败：${result.message || '未知业务错误'}`);
         }
@@ -585,40 +442,6 @@
     // 停止任务按钮事件（参照 Linkstart 的方式实现）
     document.getElementById("stoptask-button").addEventListener("click", async function(){
       const body = {};
-      // 遍历每个任务项，如果选中则将配置加入请求体
-      document.querySelectorAll(".task-item").forEach(item => {
-        const taskName = item.getAttribute("data-task");
-        if(item.classList.contains("selected")){
-          const config = Object.assign({}, taskConfigs[taskName]);
-          if(taskName === "taskInfrast"){
-            config.facility = config.facility.split(',').map(s => s.trim()).filter(s => s);
-          }
-          if(taskName === "taskFight"){
-            try {
-              config.drops = JSON.parse(config.drops);
-            } catch(e) {
-              config.drops = {};
-            }
-          }
-          if(taskName === "taskMall"){
-            config.buy_first = config.buy_first.split(',').map(s => s.trim()).filter(s => s);
-            config.blacklist = config.blacklist.split(',').map(s => s.trim()).filter(s => s);
-          }
-          if(taskName === "taskRecruit"){
-            config.select = config.select.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-            config.confirm = config.confirm.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-            config.first_tags = config.first_tags.split(',').map(s => s.trim()).filter(s => s);
-            try {
-              config.recruitment_time = JSON.parse(config.recruitment_time);
-            } catch(e) {
-              config.recruitment_time = {"3":540, "4":540, "5":540, "6":540};
-            }
-          }
-          // 停止任务时将 enable 置为 false
-          config.enable = false;
-          body[taskName] = config;
-        }
-      });
       try {
         const response = await fetch('/maasst/stoptask', {
           method: 'POST',
@@ -669,7 +492,7 @@
           imgElement.src = "data:image/png;base64," + result.data.imageData;
           imgElement.style.display = "block";
         } else {
-          alert("截图失败");
+          alert(result?.message || "截图失败");
         }
       } catch(e) {
         alert("截图请求出错：" + e);
@@ -708,9 +531,14 @@
           value = input.checked;
         } else if(input.type === "number"){
           value = Number(value);
+          if (input.min !== '') value = Math.max(Number(input.min), value);
+          if (input.max !== '') value = Math.min(Number(input.max), value);
         }
+        if (typeof taskConfigs[currentTask][key] === 'number') value = Number(value);
         taskConfigs[currentTask][key] = value;
       });
+      try { processTaskConfig(currentTask, taskConfigs[currentTask]); }
+      catch (e) { alert('配置错误：' + e.message); return; }
       const taskItem = document.querySelector(`.task-item[data-task="${currentTask}"]`);
       taskItem.querySelector(".config-summary").textContent = JSON.stringify(taskConfigs[currentTask]);
       closeModal();
@@ -723,9 +551,9 @@
       const fields = fieldConfig[task];
   
       for (let key in config) {
-        if(key === "enable") continue;
+        if(key === "enable" || !isTaskFieldVisible(task, key, config)) continue;
   
-        const field = fields[key] || {};
+        const field = { ...fields[key], options: getFieldOptions(task, key, config) };
         // 新建一个 div 用于非布尔类型情况（布尔类型单独处理）
         const div = document.createElement("div");
         div.style.marginBottom = "15px";
@@ -752,6 +580,10 @@
           input.type = "checkbox";
           input.name = key; // 添加 name 属性，确保保存时能取到值
           input.checked = value;
+          input.addEventListener('change', () => {
+            config[key] = input.checked;
+            if (key === 'blackflow_start_utopia') openConfigModal(task);
+          });
           input.style.marginRight = "8px";
   
           const newLabel = document.createElement("label");
@@ -771,13 +603,15 @@
               const option = document.createElement("option");
               option.value = optValue;
               option.textContent = optText;
-              if(optValue === value) option.selected = true;
+              if(String(optValue) === String(value)) option.selected = true;
               input.appendChild(option);
             });
           } else if (fieldType === "number") {
             input = document.createElement("input");
             input.type = "number";
             input.value = value;
+            if (field.min !== undefined) input.min = field.min;
+            if (field.max !== undefined) input.max = field.max;
           } else if (["facility", "buy_first", "blacklist", "select", "confirm", "first_tags"].includes(key)) {
             input = document.createElement("textarea");
             if(Array.isArray(value)){
@@ -786,7 +620,7 @@
                 input.value = value;
             }
             input.rows = 2;
-          } else if (["drops", "recruitment_time"].includes(key)) {
+          } else if (["drops", "recruitment_time", "collectible_mode_start_list", "collectible_mode_core_char_list"].includes(key)) {
             input = document.createElement("textarea");
             if(typeof value === "object"){
                 input.value = JSON.stringify(value, null, 2);
@@ -800,6 +634,15 @@
             input.value = value;
           }
   
+          if (task === 'taskRoguelike' && ['theme', 'mode', 'blackflow_strategy', 'blackflow_start_utopia'].includes(key)) {
+            input.addEventListener('change', () => {
+              config[key] = input.type === 'checkbox' ? input.checked : (typeof value === 'number' ? Number(input.value) : input.value);
+              if (key === 'theme') config.mode = 0;
+              openConfigModal(task);
+            });
+          } else {
+            input.addEventListener('change', () => { config[key] = typeof value === 'number' ? Number(input.value) : input.value; });
+          }
           input.name = key;
           input.style.width = "100%";
           input.style.padding = "6px";

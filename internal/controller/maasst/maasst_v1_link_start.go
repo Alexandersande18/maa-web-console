@@ -49,5 +49,6 @@ func (c *ControllerV1) LinkStart(ctx context.Context, req *v1.LinkStartReq) (res
 
 		return
 	}
+	res.Message = "任务已加入队列，将按顺序执行"
 	return
 }

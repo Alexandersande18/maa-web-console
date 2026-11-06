@@ -3,7 +3,7 @@ package dto
 import "encoding/json"
 
 type TaskType int
-type TaskID int
+type TaskID int32
 
 const (
 	StartUp   TaskType = iota //开始唤醒
@@ -140,7 +140,7 @@ func (t *TaskCloseDown) GetType() TaskType {
 //     "expiring_medicine": int,   // 最大使用 48 小时内过期理智药数量，可选，默认 0
 //     "stone": int,               // 最大吃石头数量，可选，默认 0
 //     "times": int,               // 指定次数，可选，默认无穷大
-//     "series": int,              // 连战次数，可选，1~6
+//     "series": int,              // 连战次数，可选，0~10，0为自动选择
 //     "drops": {                  // 指定掉落数量，可选，默认不指定
 //         "30011": int,           // key - item_id, value 数量. key 可参考 resource/item_index.json 文件
 //         "30062": int            // 是或的关系
@@ -163,7 +163,7 @@ type TaskFight struct {
 	ExpiringMedicine int            `json:"expiring_medicine" v:"min:0"           d:"0"                                                                     dc:"最大使用临期理智药数量"`
 	Stone            int            `json:"stone"             v:"min:0"           d:"0"                                                                     dc:"最大吃石头数量"`
 	Times            int            `json:"times"             v:"min:-1"          d:"-1"                                                                    dc:"执行次数，2147483647表示无限"`
-	Series           int            `json:"series"            v:"min:0|max:6"     d:"1"                                                                     dc:"连战次数，范围0-6"`
+	Series           int            `json:"series"            v:"min:0|max:10"     d:"1"                                                                     dc:"连战次数，范围0-10，0为自动选择"`
 	Drops            map[string]int `json:"drops"             v:""                d:""                                                                      dc:"掉落数量限制，满足任一即停"`
 	ReportToPenguin  bool           `json:"report_to_penguin" v:""                d:"false"                                                                 dc:"是否上报企鹅数据"`
 	PenguinID        string         `json:"penguin_id"        v:"required-if:ReportToPenguin,true" d:""                                                    dc:"企鹅数据ID，上报时必填"`
@@ -392,6 +392,7 @@ func (t *TaskAward) GetType() TaskType {
 //                      //   Sami      - 探索者的银凇止境
 //                      //   Sarkaz    - 萨卡兹的无终奇语
 //                      //   JieGarden - 岁的界园志异
+//                      //   BlackFlow - 黑流树海
 //     "mode": int,     // 模式，可选，默认值 0
 //                      //   0 - 刷分/奖励点数，尽可能稳定地打更多层数
 //                      //   1 - 刷源石锭，第一层投资完就退出
@@ -408,7 +409,7 @@ func (t *TaskAward) GetType() TaskType {
 //     "core_char": string,            // 开局干员名，可选；仅支持单个干员**中文名**，无论区服；若留空或设置为空字符串 "" 则根据练度自动选择
 //     "use_support": bool,            // 开局干员是否为助战干员，可选，默认值 false
 //     "use_nonfriend_support": bool,  // 是否可以是非好友助战干员，可选，默认值 false；仅在 use_support 为 true 时有效
-//     "starts_count": int,                // 开始探索的次数，可选，默认值 INT_MAX；达到后自动停止任务
+//     "starts_count": int,                // 开始探索的次数，可选，默认3，最大3；达到后自动停止任务
 //     "difficulty": int,                  // 指定难度等级，可选，默认值 0；仅适用于**除 Phantom 以外**的主题；
 //                                         // 若未解锁难度，则会选择当前已解锁的最高难度
 //     "stop_at_final_boss": bool,         // 是否在第 5 层险路恶敌节点前停止任务，可选，默认值 false；仅适用于**除 Phantom 以外**的主题
@@ -447,43 +448,67 @@ func (t *TaskAward) GetType() TaskType {
 //                                     // 仅在 Sarkaz 主题，Investment 模式，“点刺成锭分队” or “后勤分队” 时可能为 true
 //                                     // 使用固定种子
 // }
+// 黑流树海扩展参数以 v6.21.1 集成文档为准：blackflow_strategy、blackflow_cultivation_target、
+// blackflow_start_animals、blackflow_start_rewards、blackflow_start_utopia、
+// blackflow_start_reward_priority、collectible_mode_roles、collectible_mode_core_char_list。
 type TaskRoguelike struct {
-	Enable                        bool            `json:"enable"                          v:"boolean" d:"true"                                           dc:"是否启用本任务"`
-	Theme                         string          `json:"theme"                           v:"in:Phantom,Mizuki,Sami,Sarkaz,JieGarden" d:"Phantom"   dc:"主题类型：Phantom/Mizuki/Sami/Sarkaz/JieGarden"`
-	Mode                          int             `json:"mode"                            v:"in:0,1,2,3,4,5,6,7" d:"0"                                   dc:"作战模式：0刷分,1刷锭,2已弃用,3开发中,4凹开局,5坍缩范式,6月度小队,7深入调查"`
-	Squad                         string          `json:"squad"                           v:""                     d:"指挥分队"                            dc:"开局分队"`
-	Roles                         string          `json:"roles"                           v:""                     d:"取长补短"                            dc:"职业组合"`
-	CoreChar                      string          `json:"core_char"                       v:""                     d:""                                  dc:"核心干员名称"`
-	UseSupport                    bool            `json:"use_support"                     v:""                     d:"false"                              dc:"使用助战"`
-	UseNonFriendSupport           bool            `json:"use_nonfriend_support"           v:""                     d:"false"                              dc:"允许非好友助战"`
-	StartsCount                   int             `json:"starts_count"                    v:"min:0"                d:"2147483647"                         dc:"开始探索次数上限，达到后自动停止"`
-	Difficulty                    int             `json:"difficulty"                     v:"min:0"                d:"0"                                  dc:"指定难度等级，未解锁时自动选择最高已解锁难度"`
-	StopAtFinalBoss               bool            `json:"stop_at_final_boss"              v:""                     d:"false"                              dc:"最终关卡前停止"`
-	StopAtMaxLevel                bool            `json:"stop_at_max_level"               v:""                     d:"false"                              dc:"满级后停止"`
-	InvestmentEnabled             bool            `json:"investment_enabled"              v:""                     d:"true"                               dc:"启用投资"`
-	InvestmentsCount              int             `json:"investments_count"               v:"min:0"                d:"2147483647"                         dc:"投资次数上限，达到后自动停止"`
-	StopWhenInvestmentFull        bool            `json:"stop_when_investment_full"        v:""                     d:"false"                              dc:"投资满后停止"`
-	InvestmentWithMoreScore       bool            `json:"investment_with_more_score"       v:""                     d:"false"                              dc:"投资后购物"`
-	StartWithEliteTwo             bool            `json:"start_with_elite_two"             v:""                     d:"false"                              dc:"凹精二开局"`
-	OnlyStartWithEliteTwo         bool            `json:"only_start_with_elite_two"         v:""                     d:"false"                              dc:"仅精二开局"`
-	RefreshTraderWithDice         bool            `json:"refresh_trader_with_dice"         v:""                     d:"false"                              dc:"骰子刷新商店"`
-	FirstFloorFoldartal           string          `json:"first_floor_foldartal"            v:""                     d:""                                  dc:"首层密文板"`
-	StartFoldartalList            []string        `json:"start_foldartal_list"             v:""                     d:""                                  dc:"开局密文板列表"`
-	UseFoldartal                  bool            `json:"use_foldartal"                    v:""                     d:"true"                               dc:"是否使用密文板（Sami主题；模式5建议为false，其余模式建议为true）"`
-	CheckCollapsalParadigms       bool            `json:"check_collapsal_paradigms"        v:""                     d:"false"                              dc:"是否检测坍缩范式（模式5建议为true）"`
-	DoubleCheckCollapsalParadigms bool            `json:"double_check_collapsal_paradigms" v:""                     d:"true"                               dc:"是否执行坍缩范式检测防漏（仅Sami且开启坍缩检测时有效）"`
-	ExpectedCollapsalParadigms    []string        `json:"expected_collapsal_paradigms"     v:""                     d:"目空一些,睁眼瞎,图像损坏,一抹黑"     dc:"期望坍缩范式（仅Sami主题模式5有效）"`
-	MonthlySquadAutoIterate       bool            `json:"monthly_squad_auto_iterate"       v:""                     d:"false"                          dc:"月度小队自动迭代"`
-	MonthlySquadCheckComms        bool            `json:"monthly_squad_check_comms"        v:""                     d:"false"                             dc:"检查月度通信"`
-	DeepExplorationAutoIterate    bool            `json:"deep_exploration_auto_iterate"    v:""                     d:"false"                             dc:"深入调查自动迭代"`
-	CollectibleModeShopping       bool            `json:"collectible_mode_shopping"        v:""                     d:"false"                             dc:"烧水购物模式"`
-	CollectibleModeSquad          string          `json:"collectible_mode_squad"           v:""                     d:""                                 dc:"烧水分队配置"`
-	CollectibleModeStartList      map[string]bool `json:"collectible_mode_start_list"      v:""                     d:""                                 dc:"烧水期望奖励配置"`
-	StartWithSeed                 bool            `json:"start_with_seed"                  v:""                     d:"false"                             dc:"使用种子刷钱"`
+	Enable                        bool                 `json:"enable"                          v:"boolean" d:"true"                                           dc:"是否启用本任务"`
+	Theme                         string               `json:"theme"                           v:"in:Phantom,Mizuki,Sami,Sarkaz,JieGarden,BlackFlow" d:"Phantom"   dc:"主题类型：Phantom/Mizuki/Sami/Sarkaz/JieGarden/BlackFlow（黑流树海）"`
+	Mode                          int                  `json:"mode"                            v:"in:0,1,2,3,4,5,6,7,30001,30003" d:"0"                                   dc:"作战模式：0刷分,1刷锭,2已弃用,3开发中,4凹开局,5坍缩范式,6月度小队,7深入调查,30001刷襁褓动物,30003黑流树海刷开局"`
+	Squad                         string               `json:"squad"                           v:""                     d:"指挥分队"                            dc:"开局分队"`
+	Roles                         string               `json:"roles"                           v:""                     d:"取长补短"                            dc:"职业组合"`
+	CoreChar                      string               `json:"core_char"                       v:""                     d:""                                  dc:"核心干员名称"`
+	UseSupport                    bool                 `json:"use_support"                     v:""                     d:"false"                              dc:"使用助战"`
+	UseNonFriendSupport           bool                 `json:"use_nonfriend_support"           v:""                     d:"false"                              dc:"允许非好友助战"`
+	StartsCount                   int                  `json:"starts_count"                    v:"min:0|max:3"          d:"3"                                  dc:"开始探索次数上限，范围0-3，达到后自动停止"`
+	Difficulty                    int                  `json:"difficulty"                     v:"min:-1"               d:"0"                                  dc:"指定难度等级，-1为不指定，未解锁时自动选择最高已解锁难度"`
+	StopAtFinalBoss               bool                 `json:"stop_at_final_boss"              v:""                     d:"false"                              dc:"最终关卡前停止"`
+	StopAtMaxLevel                bool                 `json:"stop_at_max_level"               v:""                     d:"false"                              dc:"满级后停止"`
+	InvestmentEnabled             bool                 `json:"investment_enabled"              v:""                     d:"true"                               dc:"启用投资"`
+	InvestmentsCount              int                  `json:"investments_count"               v:"min:0"                d:"2147483647"                         dc:"投资次数上限，达到后自动停止"`
+	StopWhenInvestmentFull        bool                 `json:"stop_when_investment_full"        v:""                     d:"false"                              dc:"投资满后停止"`
+	InvestmentWithMoreScore       bool                 `json:"investment_with_more_score"       v:""                     d:"false"                              dc:"投资后购物"`
+	StartWithEliteTwo             bool                 `json:"start_with_elite_two"             v:""                     d:"false"                              dc:"凹精二开局"`
+	OnlyStartWithEliteTwo         bool                 `json:"only_start_with_elite_two"         v:""                     d:"false"                              dc:"仅精二开局"`
+	RefreshTraderWithDice         bool                 `json:"refresh_trader_with_dice"         v:""                     d:"false"                              dc:"骰子刷新商店"`
+	FirstFloorFoldartal           string               `json:"first_floor_foldartal"            v:""                     d:""                                  dc:"首层密文板"`
+	StartFoldartalList            []string             `json:"start_foldartal_list"             v:""                     d:""                                  dc:"开局密文板列表"`
+	UseFoldartal                  bool                 `json:"use_foldartal"                    v:""                     d:"true"                               dc:"是否使用密文板（Sami主题；模式5建议为false，其余模式建议为true）"`
+	CheckCollapsalParadigms       bool                 `json:"check_collapsal_paradigms"        v:""                     d:"false"                              dc:"是否检测坍缩范式（模式5建议为true）"`
+	DoubleCheckCollapsalParadigms bool                 `json:"double_check_collapsal_paradigms" v:""                     d:"true"                               dc:"是否执行坍缩范式检测防漏（仅Sami且开启坍缩检测时有效）"`
+	ExpectedCollapsalParadigms    []string             `json:"expected_collapsal_paradigms"     v:""                     d:"目空一些,睁眼瞎,图像损坏,一抹黑"     dc:"期望坍缩范式（仅Sami主题模式5有效）"`
+	MonthlySquadAutoIterate       bool                 `json:"monthly_squad_auto_iterate"       v:""                     d:"false"                          dc:"月度小队自动迭代"`
+	MonthlySquadCheckComms        bool                 `json:"monthly_squad_check_comms"        v:""                     d:"false"                             dc:"检查月度通信"`
+	DeepExplorationAutoIterate    bool                 `json:"deep_exploration_auto_iterate"    v:""                     d:"false"                             dc:"深入调查自动迭代"`
+	CollectibleModeShopping       bool                 `json:"collectible_mode_shopping"        v:""                     d:"false"                             dc:"烧水购物模式"`
+	CollectibleModeSquad          string               `json:"collectible_mode_squad"           v:""                     d:""                                 dc:"烧水分队配置"`
+	CollectibleModeStartList      map[string]bool      `json:"collectible_mode_start_list"      v:""                     d:""                                 dc:"烧水期望奖励配置"`
+	StartWithSeed                 bool                 `json:"start_with_seed"                  v:""                     d:"false"                             dc:"使用种子刷钱"`
+	BlackflowStrategy             string               `json:"blackflow_strategy,omitempty" v:"in:baby_animal,investment,burn_with_investment,burn,ending1,ending2,ending3" dc:"黑流树海路线策略，留空由核心推断；刷开局模式不读取"`
+	BlackflowCultivationTarget    string               `json:"blackflow_cultivation_target,omitempty" v:"in:swaddled_cat,swaddled_dog,swaddled_cerberus,swaddled_feathered_serpent" dc:"黑流树海目标襁褓动物"`
+	BlackflowStartAnimals         []string             `json:"blackflow_start_animals" v:"" dc:"黑流树海刷开局准备局动物，0至2项，羽蛇最多1项"`
+	BlackflowStartRewards         int                  `json:"blackflow_start_rewards" v:"min:0|max:4095" dc:"黑流树海刷开局奖励位掩码，0至4095"`
+	BlackflowStartUtopia          bool                 `json:"blackflow_start_utopia" dc:"黑流树海刷开局凹第一层实托邦，需难度6及以上"`
+	BlackflowStartRewardPriority  []string             `json:"blackflow_start_reward_priority,omitempty" dc:"凹实托邦时的奖励优先级，不可为空或重复"`
+	CollectibleModeRoles          string               `json:"collectible_mode_roles,omitempty" dc:"黑流树海刷开局准备局职业组，留空沿用roles"`
+	CollectibleModeCoreCharList   []RoguelikeStartOper `json:"collectible_mode_core_char_list,omitempty" dc:"黑流树海刷开局准备局干员顺位，留空沿用核心干员"`
+}
+
+type RoguelikeStartOper struct {
+	Name       string `json:"name"`
+	UseSupport bool   `json:"use_support"`
 }
 
 func (t *TaskRoguelike) Serialize() string {
-	b, err := json.Marshal(t)
+	params := *t
+	// 已保存的旧定时任务也必须遵守新的探索次数上限。
+	if params.StartsCount > 3 {
+		params.StartsCount = 3
+	}
+	if params.BlackflowStartAnimals == nil {
+		params.BlackflowStartAnimals = []string{}
+	}
+	b, err := json.Marshal(params)
 	if err != nil {
 		return ""
 	}

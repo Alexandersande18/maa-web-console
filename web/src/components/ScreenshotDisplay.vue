@@ -46,7 +46,7 @@ export default {
         if (result && result.data && result.data.imageData) {
           this.screenshotSrc = "data:image/png;base64," + result.data.imageData
         } else {
-          alert("截图失败")
+          alert(result?.message || "截图失败")
         }
       } catch(e) {
         alert("截图请求出错：" + e)

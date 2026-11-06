@@ -20,7 +20,7 @@ func (c *ControllerV1) Screenshot(ctx context.Context, req *v1.ScreenshotReq) (r
 	// 获取截图二进制数据
 	uid := gconv.String(ctx.Value(middleware.CtxUsername))
 	g.Log().Debug(context.TODO(), "uId: ", uid)
-	imgData, err := service.Maasst().TakeScreenshot(uid)
+	imgData, err := service.Maasst().TakeScreenshot(ctx, uid)
 	if err != nil {
 		err = gerror.WrapCode(gcode.CodeInternalError, err, "截图失败")
 		return

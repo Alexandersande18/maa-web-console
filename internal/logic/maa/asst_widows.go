@@ -1,7 +1,10 @@
 package maa
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"syscall"
 
 	"golang.org/x/sys/windows"
@@ -27,30 +30,40 @@ var createAsstFunc = func(name string, dll *syscall.DLL) (procCall, error) {
 }
 
 var (
-	asstCreate        procCall
-	asstCreateEx      procCall
-	asstGetVersion    procCall
-	asstAppendTask    procCall
-	asstConnect       procCall
-	asstSetUserDir    procCall
-	asstSetTaskParams procCall
-	asstLoadResource  procCall
-	asstStart         procCall
-	asstStop          procCall
-	asstRunning       procCall
-	asstDestroy       procCall
-	asstGetImage      procCall
-    asstGetTasksList  procCall
+	loadedDLLPath      string
+	asstCreate         procCall
+	asstCreateEx       procCall
+	asstGetVersion     procCall
+	asstAppendTask     procCall
+	asstConnect        procCall
+	asstSetUserDir     procCall
+	asstSetTaskParams  procCall
+	asstLoadResource   procCall
+	asstStart          procCall
+	asstStop           procCall
+	asstRunning        procCall
+	asstDestroy        procCall
+	asstGetImage       procCall
+	asstGetTasksList   procCall
 	asstAsyncScreencap procCall
 )
 
 func newSyscall(path string) (err error) {
-	dllPath := path + sep + loadDLL
+	dllPath, err := filepath.Abs(filepath.Join(path, loadDLL))
+	if err != nil {
+		return err
+	}
+	if loadedDLLPath != "" {
+		if !strings.EqualFold(loadedDLLPath, dllPath) {
+			return fmt.Errorf("all instances must use the same MaaCore DLL: %s != %s", loadedDLLPath, dllPath)
+		}
+		return nil
+	}
 
 	// 使用 LoadLibraryEx 加载 DLL，并指定 LOAD_WITH_ALTERED_SEARCH_PATH 标志
 	handle, err := windows.LoadLibraryEx(
 		dllPath,
-		0, // 保留参数，设为 0
+		0,                                     // 保留参数，设为 0
 		windows.LOAD_WITH_ALTERED_SEARCH_PATH, // 关键标志
 	)
 	if err != nil {
@@ -64,7 +77,11 @@ func newSyscall(path string) (err error) {
 	}
 
 	// 绑定函数
-	return initFunc(dll)
+	if err = initFunc(dll); err != nil {
+		return err
+	}
+	loadedDLLPath = dllPath
+	return nil
 }
 
 func initFunc(dll *syscall.DLL) (err error) {
@@ -119,19 +136,19 @@ func initFunc(dll *syscall.DLL) (err error) {
 	}
 
 	asstGetImage, err = createAsstFunc("AsstGetImage", dll)
-    if err != nil {
-        return
-    }
-    
-    asstGetTasksList, err = createAsstFunc("AsstGetTasksList", dll)
-    if err != nil {
-        return
-    }
+	if err != nil {
+		return
+	}
+
+	asstGetTasksList, err = createAsstFunc("AsstGetTasksList", dll)
+	if err != nil {
+		return
+	}
 
 	asstAsyncScreencap, err = createAsstFunc("AsstAsyncScreencap", dll)
 	if err != nil {
 		return
 	}
-    
+
 	return nil
 }

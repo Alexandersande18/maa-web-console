@@ -47,7 +47,7 @@ export const TASK_TEMPLATE = {
       expiring_medicine: 0,
       stone: 0,
       times: 2147483647,
-      series: 6,
+      series: 10,
       drops: "{}",
       report_to_penguin: false,
       penguin_id: "",
@@ -95,7 +95,7 @@ export const TASK_TEMPLATE = {
       core_char: "",
       use_support: false,
       use_nonfriend_support: false,
-      starts_count: 8,
+      starts_count: 3,
       difficulty: 18,
       stop_at_final_boss: false,
       stop_at_max_level: false,
@@ -118,7 +118,15 @@ export const TASK_TEMPLATE = {
       collectible_mode_shopping: false,
       collectible_mode_squad: "",
       collectible_mode_start_list: "{}",
-      start_with_seed: false
+      start_with_seed: false,
+      blackflow_strategy: "",
+      blackflow_cultivation_target: "swaddled_cat",
+      blackflow_start_animals: "",
+      blackflow_start_rewards: 0,
+      blackflow_start_utopia: false,
+      blackflow_start_reward_priority: "unnumbered_item,survey_advance,space_lease,regression_compensation,forest_ride,nest_parasitism",
+      collectible_mode_roles: "",
+      collectible_mode_core_char_list: "[]"
     },
     configSummary: ""
   }
@@ -210,7 +218,9 @@ export const FIELD_CONFIG = {
     },
     series: {
       label: "连战次数",
-      hint: "0~6, 0为自动切换为当前可用的最大次数, 如当前理智不够6次, 则选择最低可用次数"
+      min: 0,
+      max: 10,
+      hint: "0~10，0为自动选择当前可用的最大连战次数"
     },
     drops: { label: "掉落限制", hint: "JSON格式，例如：{\"30011\":5}" },
     report_to_penguin: { label: "上报企鹅物流" },
@@ -258,7 +268,8 @@ export const FIELD_CONFIG = {
         Mizuki: "水月与深蓝之树",
         Sami: "探索者的银凇止境",
         Sarkaz: "萨卡兹的无终奇语",
-        JieGarden: "界园"
+        JieGarden: "界园",
+        BlackFlow: "黑流树海"
       }
     },
     mode: {
@@ -280,8 +291,8 @@ export const FIELD_CONFIG = {
     core_char: { label: "核心干员名称" },
     use_support: { label: "使用助战" },
     use_nonfriend_support: { label: "允许非好友助战" },
-    starts_count: { label: "开始探索次数上限", max: 8 },
-    difficulty: { label: "指定难度等级" },
+    starts_count: { label: "开始探索次数上限", min: 0, max: 3, hint: "最多3次，达到后自动停止" },
+    difficulty: { label: "指定难度等级", min: -1, hint: "-1表示不指定难度；黑流树海凹实托邦需6及以上" },
     stop_at_final_boss: { label: "最终关卡前停止" },
     stop_at_max_level: { label: "满级后停止" },
     investment_enabled: { label: "投资源石锭" },
@@ -301,14 +312,83 @@ export const FIELD_CONFIG = {
     monthly_squad_check_comms: { label: "检查月度通信" },
     deep_exploration_auto_iterate: { label: "深入调查自动切换" },
     collectible_mode_shopping: { label: "烧水模式购物" },
-    collectible_mode_squad: { label: "烧水模式分队" },
+    collectible_mode_squad: { label: "准备局分队", hint: "刷开局使用，留空沿用开局分队；机械师快速飞三层可使用特勤分队或堡垒战术分队" },
     collectible_mode_start_list: {
       label: "烧水期望奖励",
       hint: 'JSON 格式，例如：{"hot_water":true,"ingot":true}'
     },
-    start_with_seed: { label: "使用种子刷钱" }
+    start_with_seed: { label: "使用种子刷钱" },
+    blackflow_strategy: {
+      label: "黑流树海路线策略",
+      options: {
+        "": "自动（按作战模式和投资开关推断）",
+        investment: "第一层投资后退出",
+        burn_with_investment: "投资后快速到第三层重开",
+        burn: "快速到第三层重开",
+        baby_animal: "培育襁褓动物",
+        ending1: "第一结局",
+        ending2: "第二结局",
+        ending3: "第三结局"
+      },
+      hint: "刷等级模式可指定路线；结局是否开放以游戏内为准"
+    },
+    blackflow_cultivation_target: {
+      label: "目标襁褓动物",
+      options: {
+        swaddled_cat: "襁褓猫",
+        swaddled_dog: "襁褓狗",
+        swaddled_cerberus: "襁褓三头犬",
+        swaddled_feathered_serpent: "襁褓羽蛇"
+      }
+    },
+    blackflow_start_animals: {
+      label: "准备局襁褓动物",
+      hint: "逗号分隔，最多2项，可重复，羽蛇最多1项；可填 swaddled_cat（猫）、swaddled_dog（狗）、swaddled_cerberus（三头犬）、swaddled_feathered_serpent（羽蛇）；留空只要求到第三层"
+    },
+    blackflow_start_rewards: {
+      label: "期望开局奖励",
+      min: 0,
+      max: 4095,
+      hint: "命中任一即停，多个数值相加：1未编号物、2调查预付款、4空间租赁、8退行补偿、16林间代步、32巢寄生；带羽蛇可加64天马、128骏鹰、256巨龙、512九头蛇、1024白泽、2048金乌；0不限制"
+    },
+    blackflow_start_utopia: { label: "凹第一层实托邦", hint: "目标局难度需6及以上；未开启时命中奖励后保留该局，不选择奖励" },
+    blackflow_start_reward_priority: {
+      label: "实托邦开局奖励优先级",
+      hint: "逗号分隔，不可重复：unnumbered_item、survey_advance、space_lease、regression_compensation、forest_ride、nest_parasitism、pegasus、hippogriff、dragon、hydra、bai_ze、golden_crow"
+    },
+    collectible_mode_roles: { label: "准备局职业组", hint: "留空沿用职业组合；机械师快速飞三层使用稳扎稳打或坚不可摧" },
+    collectible_mode_core_char_list: {
+      label: "准备局开局干员",
+      hint: 'JSON数组，例如：[{"name":"机械师","use_support":false}]；留空沿用核心干员，快速飞三层需要自己的满天赋机械师'
+    }
   }
 };
+
+export function getFieldOptions(taskKey, key, config, fieldConfig = FIELD_CONFIG[taskKey]) {
+  if (taskKey === "taskRoguelike" && key === "mode" && config.theme === "BlackFlow") {
+    return { 0: "刷奖励等级", 1: "刷源石锭", 30001: "刷襁褓动物", 30003: "刷开局" };
+  }
+  const options = fieldConfig?.[key]?.options;
+  if (taskKey === "taskRoguelike" && key === "mode") {
+    return Object.fromEntries(Object.entries(options).filter(([mode]) => Number(mode) < 30000));
+  }
+  return options;
+}
+
+export function isTaskFieldVisible(taskKey, key, config) {
+  if (taskKey !== "taskRoguelike") return true;
+  const blackflow = config.theme === "BlackFlow";
+  const startRun = Number(config.mode) === 30003;
+  if (key === "blackflow_strategy") return blackflow && Number(config.mode) === 0;
+  if (key === "blackflow_cultivation_target") {
+    return blackflow && (Number(config.mode) === 30001 || (Number(config.mode) === 0 && config.blackflow_strategy === "baby_animal"));
+  }
+  if (key.startsWith("blackflow_start_")) {
+    return blackflow && startRun && (key !== "blackflow_start_reward_priority" || config.blackflow_start_utopia);
+  }
+  if (["collectible_mode_squad", "collectible_mode_roles", "collectible_mode_core_char_list"].includes(key)) return blackflow && startRun;
+  return !blackflow || !["start_with_elite_two", "only_start_with_elite_two", "refresh_trader_with_dice", "monthly_squad_auto_iterate", "monthly_squad_check_comms", "deep_exploration_auto_iterate", "start_with_seed"].includes(key);
+}
 
 export function createDefaultTasks() {
   return JSON.parse(JSON.stringify(TASK_TEMPLATE));

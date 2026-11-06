@@ -39,15 +39,19 @@ $FULL_TAG = "${REGISTRY}:${TAG}"
 try {
     Write-Host "[STEP] Front-end build (npm run build) ..." -ForegroundColor Yellow
     npm run build
+    if ($LASTEXITCODE -ne 0) { throw 'Front-end build failed' }
 
     Write-Host "`n[STEP] Docker build ..." -ForegroundColor Yellow
     docker build -f $dockerfile -t $IMAGE_NAME .
+    if ($LASTEXITCODE -ne 0) { throw 'Docker build failed' }
 
     Write-Host "`n[STEP] Docker tag ..." -ForegroundColor Yellow
     docker tag $IMAGE_NAME $FULL_TAG
+    if ($LASTEXITCODE -ne 0) { throw 'Docker tag failed' }
 
     Write-Host "`n[STEP] Docker push ..." -ForegroundColor Yellow
     docker push $FULL_TAG
+    if ($LASTEXITCODE -ne 0) { throw 'Docker push failed' }
 
     Write-Host "`n[SUCCESS] All operations completed!" -ForegroundColor Green
 }

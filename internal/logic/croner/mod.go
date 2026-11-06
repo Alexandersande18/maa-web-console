@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 
 	"maa-backend/internal/dao"
@@ -17,42 +18,23 @@ import (
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
-var (
-	randSeed = rand.New(rand.NewSource(time.Now().UnixNano()))
-)
-
 type sCroner struct {
+	mu    sync.Mutex
 	ctx   gctx.Ctx
 	gcron *gcron.Cron
 }
 
 func init() {
-	randSeed.Seed(time.Now().UnixNano())
 	sc := &sCroner{ctx: gctx.New(), gcron: gcron.New()}
 	service.RegisterCroner(sc)
-	sc.SetupCronJobs()
 }
 
 // ExecCronJob 执行具体任务
 func (s *sCroner) ExecCronJob(job *dto.CronJob) error {
-	// 记录执行时间
-	if _, err := dao.CronJob.Ctx(s.ctx).
-		Where("id", gconv.Int(job.Id)).
-		Update(do.CronJob{
-			LastExecutedAt: gconv.GTime(time.Now()),
-		}); err != nil {
-		g.Log().Errorf(s.ctx, "update last_executed_at failed: %v", err)
-	}
-
 	uid := job.UserName
 
 	// 根据任务类型执行具体操作
 	g.Log().Infof(s.ctx, "Executing job: %+v, User: %+v", job.Name, uid)
-
-	//停止当前任务
-	if err := service.Maasst().StopTask(uid); err != nil {
-		return err
-	}
 
 	var taskList []dto.Tasker
 	taskList = append(taskList, &dto.TaskStartUp{
@@ -83,11 +65,22 @@ func (s *sCroner) ExecCronJob(job *dto.CronJob) error {
 		ClientType: "Official",
 	})
 
-	return service.Maasst().LinkStart(uid, taskList)
+	if err := service.Maasst().LinkStart(uid, taskList); err != nil {
+		return err
+	}
+	// Rejected duplicate jobs must not overwrite the last accepted execution.
+	if _, err := dao.CronJob.Ctx(s.ctx).Where("id", gconv.Int(job.Id)).Update(do.CronJob{
+		LastExecutedAt: gconv.GTime(time.Now()),
+	}); err != nil {
+		g.Log().Errorf(s.ctx, "update last_executed_at failed: %v", err)
+	}
+	return nil
 }
 
 // SetupCronJobs 初始化定时任务
 func (s *sCroner) SetupCronJobs() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	// 清除所有现有任务
 	s.gcron.Stop()
 	s.gcron = gcron.New()
@@ -109,7 +102,7 @@ func (s *sCroner) SetupCronJobs() {
 		baseMinute := gconv.Int(cronJob.Minute)
 
 		// 生成随机时间偏移（5分钟以内）
-		minuteOffset := randSeed.Intn(11) - 5 // -5 ~ +5 分钟
+		minuteOffset := rand.Intn(11) - 5 // -5 ~ +5 分钟
 		adjustedMinute := baseMinute + minuteOffset
 		adjustedHour := baseHour
 
@@ -126,7 +119,7 @@ func (s *sCroner) SetupCronJobs() {
 		adjustedHour = (adjustedHour + 24) % 24
 
 		// 生成随机秒（0-59）
-		randSecond := randSeed.Intn(60)
+		randSecond := rand.Intn(60)
 
 		// 构造完整cron表达式
 		/*

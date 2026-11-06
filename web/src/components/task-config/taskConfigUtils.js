@@ -1,3 +1,5 @@
+import { TASK_TEMPLATE } from "./taskDefinitions.js";
+
 const TASK_KEYS_WITH_COMPLEX_SERIALIZATION = [
   "taskRecruit",
   "taskInfrast",
@@ -57,6 +59,7 @@ export function processTaskConfig(key, config) {
       }
       break;
     case "taskFight":
+      cfg.series = Math.max(0, Math.min(10, Number(cfg.series ?? 10)));
       if (typeof cfg.drops === "string" && cfg.drops.trim() !== "") {
         try {
           cfg.drops = JSON.parse(cfg.drops);
@@ -84,12 +87,48 @@ export function processTaskConfig(key, config) {
       }
       break;
     case "taskRoguelike":
+      cfg.mode = Number(cfg.mode ?? 0);
+      cfg.starts_count = Math.max(0, Math.min(3, Number(cfg.starts_count ?? 3)));
+      for (const key of ["blackflow_start_animals", "blackflow_start_reward_priority"]) {
+        if (typeof cfg[key] === "string") {
+          cfg[key] = cfg[key].split(",").map((s) => s.trim()).filter(Boolean);
+        }
+      }
+      cfg.blackflow_start_rewards = Number(cfg.blackflow_start_rewards ?? 0);
+      if (typeof cfg.collectible_mode_core_char_list === "string") {
+        cfg.collectible_mode_core_char_list = JSON.parse(cfg.collectible_mode_core_char_list || "[]");
+      }
+      if (!cfg.collectible_mode_core_char_list?.length) delete cfg.collectible_mode_core_char_list;
+      if (!cfg.collectible_mode_roles) delete cfg.collectible_mode_roles;
+      if (cfg.theme === "BlackFlow") {
+        if (![0, 1, 30001, 30003].includes(cfg.mode)) cfg.mode = 0;
+        cfg.start_with_elite_two = false;
+        cfg.only_start_with_elite_two = false;
+        if (cfg.mode !== 0) delete cfg.blackflow_strategy;
+        if (cfg.mode === 30003) {
+          const animals = cfg.blackflow_start_animals ?? [];
+          const allowed = ["swaddled_cat", "swaddled_dog", "swaddled_cerberus", "swaddled_feathered_serpent"];
+          if (!Array.isArray(animals) || animals.length > 2 || animals.some((s) => !allowed.includes(s)) || animals.filter((s) => s === "swaddled_feathered_serpent").length > 1) {
+            throw new Error("准备局襁褓动物最多2项，羽蛇最多1项，请使用提示中的动物代码");
+          }
+          cfg.blackflow_start_animals = animals;
+          if (!Number.isInteger(cfg.blackflow_start_rewards) || cfg.blackflow_start_rewards < 0 || cfg.blackflow_start_rewards > 4095) throw new Error("期望开局奖励须为0至4095的整数");
+          if (cfg.blackflow_start_utopia) {
+            const priority = cfg.blackflow_start_reward_priority;
+            const rewards = ["unnumbered_item", "survey_advance", "space_lease", "regression_compensation", "forest_ride", "nest_parasitism", "pegasus", "hippogriff", "dragon", "hydra", "bai_ze", "golden_crow"];
+            if (!Array.isArray(priority) || !priority.length || new Set(priority).size !== priority.length || priority.some((s) => !rewards.includes(s))) throw new Error("实托邦奖励优先级须填写有效奖励代码，不可为空或重复");
+            if (Number(cfg.difficulty) < 6) throw new Error("凹第一层实托邦需要指定难度6及以上");
+          }
+        }
+      } else if (cfg.mode >= 30000) {
+        cfg.mode = 0;
+      }
       if (typeof cfg.start_foldartal_list === "string" && cfg.start_foldartal_list.trim() !== "") {
         cfg.start_foldartal_list = cfg.start_foldartal_list
           .split(",")
           .map((s) => s.trim())
           .filter((s) => s !== "");
-      } else {
+      } else if (!Array.isArray(cfg.start_foldartal_list)) {
         cfg.start_foldartal_list = [];
       }
       if (
@@ -100,7 +139,7 @@ export function processTaskConfig(key, config) {
           .split(",")
           .map((s) => s.trim())
           .filter((s) => s !== "");
-      } else {
+      } else if (!Array.isArray(cfg.expected_collapsal_paradigms)) {
         cfg.expected_collapsal_paradigms = [];
       }
       if (
@@ -164,6 +203,13 @@ export function reverseProcessTaskConfig(key, config) {
       }
       break;
     case "taskRoguelike":
+      cfg.starts_count = Math.max(0, Math.min(3, Number(cfg.starts_count ?? 3)));
+      for (const key of ["blackflow_start_animals", "blackflow_start_reward_priority"]) {
+        if (Array.isArray(cfg[key])) cfg[key] = cfg[key].join(",");
+      }
+      if (Array.isArray(cfg.collectible_mode_core_char_list)) {
+        cfg.collectible_mode_core_char_list = JSON.stringify(cfg.collectible_mode_core_char_list);
+      }
       if (Array.isArray(cfg.start_foldartal_list)) {
         cfg.start_foldartal_list = cfg.start_foldartal_list.join(",");
       }
@@ -210,7 +256,7 @@ export function syncTasksFromCronJob(tasks, cronJob) {
   const nextTasks = tasks;
   TASK_KEYS_WITH_COMPLEX_SERIALIZATION.forEach((key) => {
     if (!cronJob[key]) return;
-    const reversed = reverseProcessTaskConfig(key, cronJob[key]);
+    const reversed = reverseProcessTaskConfig(key, { ...TASK_TEMPLATE[key].config, ...cronJob[key] });
     nextTasks[key].config = { ...reversed };
     nextTasks[key].configSummary = JSON.stringify(
       processTaskConfig(key, { ...cronJob[key] })

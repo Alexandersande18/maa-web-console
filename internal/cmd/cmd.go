@@ -7,11 +7,13 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
 	"maa-backend/internal/controller/maasst"
+	maalogic "maa-backend/internal/logic/maa"
 	"maa-backend/internal/middleware"
+	"maa-backend/internal/service"
 )
 
 const (
-    MySwaggerUITemplate = `
+	MySwaggerUITemplate = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,45 +39,47 @@ const (
 `
 )
 
-
 var (
-    Main = gcmd.Command{
-        Name:  "main",
-        Usage: "main",
-        Brief: "start http server",
-        Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
-            s := g.Server()
-            // 设置静态文件服务
-            s.AddStaticPath("/", "resource/public/html")
+	Main = gcmd.Command{
+		Name:  "main",
+		Usage: "main",
+		Brief: "start http server",
+		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
+			if err = maalogic.Initialize(); err != nil {
+				return err
+			}
+			service.Croner().SetupCronJobs()
+			s := g.Server()
+			// 设置静态文件服务
+			s.AddStaticPath("/", "resource/public/html")
 
-
-            s.Group("/", func(group *ghttp.RouterGroup) {
-                group.Middleware(ghttp.MiddlewareHandlerResponse)
-                group.Bind(maasst.NewV1().Login)
-                group.Middleware(middleware.JWTAuth)
-                group.Middleware(middleware.LogMiddleware)
-                group.Bind(
-                    maasst.NewV1().LinkStart,
-                    maasst.NewV1().Screenshot,
-                    maasst.NewV1().StopTask,
-                    maasst.NewV1().AddCronJob,
-                    maasst.NewV1().DeleteCronJob,
-                    maasst.NewV1().GetCronJobList,
-                    maasst.NewV1().UpdateCronJob,
-                    maasst.NewV1().ExecCronJob,
-                )
-            })
-            s.Group("/", func(group *ghttp.RouterGroup) {
-                group.Middleware(middleware.JWTAuth)
-                group.Middleware(middleware.LogMiddleware)
-                group.Bind(
-                    maasst.NewV1().Logs,
-                    maasst.NewV1().LogsWS,
-                )
-            })
-            s.SetSwaggerUITemplate(MySwaggerUITemplate)
-            s.Run()
-            return nil
-        },
-    }
+			s.Group("/", func(group *ghttp.RouterGroup) {
+				group.Middleware(ghttp.MiddlewareHandlerResponse)
+				group.Bind(maasst.NewV1().Login)
+				group.Middleware(middleware.JWTAuth)
+				group.Middleware(middleware.LogMiddleware)
+				group.Bind(
+					maasst.NewV1().LinkStart,
+					maasst.NewV1().Screenshot,
+					maasst.NewV1().StopTask,
+					maasst.NewV1().AddCronJob,
+					maasst.NewV1().DeleteCronJob,
+					maasst.NewV1().GetCronJobList,
+					maasst.NewV1().UpdateCronJob,
+					maasst.NewV1().ExecCronJob,
+				)
+			})
+			s.Group("/", func(group *ghttp.RouterGroup) {
+				group.Middleware(middleware.JWTAuth)
+				group.Middleware(middleware.LogMiddleware)
+				group.Bind(
+					maasst.NewV1().Logs,
+					maasst.NewV1().LogsWS,
+				)
+			})
+			s.SetSwaggerUITemplate(MySwaggerUITemplate)
+			s.Run()
+			return nil
+		},
+	}
 )

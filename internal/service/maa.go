@@ -6,13 +6,14 @@
 package service
 
 import (
+	"context"
 	dto "maa-backend/internal/model/dto"
 )
 
 type (
 	IMaasst interface {
 		HasInstance(id string) bool
-		TakeScreenshot(id string) ([]byte, error)
+		TakeScreenshot(ctx context.Context, id string) ([]byte, error)
 		LinkStart(id string, tasks []dto.Tasker) error
 		StopTask(id string) error
 		NewSSEClient(mid string, cid string) (*dto.SSEClientConn, error)

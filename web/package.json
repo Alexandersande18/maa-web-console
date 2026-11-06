@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "node scripts/sync-task-config.cjs",
+    "test:task-config": "node --experimental-default-type=module --test scripts/task-config.test.mjs",
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"

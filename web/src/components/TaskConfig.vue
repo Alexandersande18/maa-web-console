@@ -92,9 +92,9 @@ export default {
       this.closeModal();
     },
     async startTasks() {
-      const body = buildEnabledTasksPayload(this.tasks, true);
       const jwtToken = localStorage.getItem("jwtToken");
       try {
+        const body = buildEnabledTasksPayload(this.tasks, true);
         const response = await fetch("/maasst/linkstart", {
           method: "POST",
           headers: {
@@ -105,7 +105,7 @@ export default {
         });
         const result = await response.json();
         if (result.code === 0) {
-          alert("Linkstart 启动成功");
+          alert(result.data?.message || "任务已加入队列，将按顺序执行");
         } else {
           alert(`操作失败：${result.message || "未知业务错误"}`);
         }
@@ -114,7 +114,7 @@ export default {
       }
     },
     async stopTasks() {
-      const body = buildEnabledTasksPayload(this.tasks, false);
+      const body = {};
       const jwtToken = localStorage.getItem("jwtToken");
       try {
         const response = await fetch("/maasst/stoptask", {
