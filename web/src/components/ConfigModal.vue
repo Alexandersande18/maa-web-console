@@ -42,7 +42,7 @@
               </select>
             </div>
             <div v-else-if="typeof value === 'number'" class="input-wrapper">
-              <input type="number" v-model="localConfig[key]" />
+              <input type="number" v-model.number="localConfig[key]" :max="getFieldMax(key)" @input="handleNumberInput(key)" />
             </div>
             <div
               v-else-if="['facility', 'buy_first', 'blacklist', 'select', 'confirm', 'first_tags', 'start_foldartal_list', 'expected_collapsal_paradigms'].includes(key)"
@@ -87,7 +87,7 @@ export default {
   computed: {
     // 过滤掉不需要在弹窗中显示的字段，比如 'enable'
     filteredTaskConfig() {
-      const filteredKeys = new Set(['enable', 'stone', 'report_to_penguin', 'penguin_id', 'server', 'client_type', 'DrGrandet']);
+      const filteredKeys = new Set(['enable', 'stone', 'report_to_penguin', 'penguin_id', 'server', 'client_type', 'DrGrandet', 'first_floor_foldartal', 'start_foldartal_list', 'use_foldartal', 'check_collapsal_paradigms', 'double_check_collapsal_paradigms', 'expected_collapsal_paradigms', 'collectible_mode_shopping', 'collectible_mode_squad', 'collectible_mode_start_list']);
       let result = {};
       for (const key of Object.keys(this.localConfig)) {
         if (!filteredKeys.has(key)) {
@@ -103,6 +103,16 @@ export default {
   methods: {
     isBoolean(val) {
       return typeof val === 'boolean'
+    },
+    getFieldMax(key) {
+      const cfg = this.fieldConfig[key]
+      return cfg && typeof cfg.max === 'number' ? cfg.max : null
+    },
+    handleNumberInput(key) {
+      const max = this.getFieldMax(key)
+      if (typeof max === 'number' && this.localConfig[key] > max) {
+        this.localConfig[key] = max
+      }
     },
     closeAndSave() {
       // 自动保存当前配置并通知关闭
