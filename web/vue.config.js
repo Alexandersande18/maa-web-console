@@ -14,8 +14,13 @@ module.exports = defineConfig({
     ],
   },
   devServer: {
-    host: '127.0.0.1',
-    port: 8083,
+    host: process.env.DEV_SERVER_HOST || '127.0.0.1',
+    port: Number(process.env.DEV_SERVER_PORT || 8083),
+    allowedHosts: process.env.DEV_SERVER_ALLOWED_HOSTS === 'all'
+      ? 'all'
+      : (process.env.DEV_SERVER_ALLOWED_HOSTS
+        ? process.env.DEV_SERVER_ALLOWED_HOSTS.split(',').map(host => host.trim())
+        : 'auto'),
     proxy: {
       '/maasst': {
         target: 'http://localhost:5244',

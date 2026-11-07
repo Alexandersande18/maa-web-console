@@ -1,8 +1,8 @@
-# MAA Backend · 明日方舟 Web 控制台
+# MAA Web Console · 明日方舟 Web 控制台
 
 基于 [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) 的个人 Web 控制台。通过浏览器配置任务、安排每日执行时间、查看实时日志和模拟器截图；Go 后端调用本机 MaaCore，通过 ADB 操作模拟器。
 
-后端使用 GoFrame、MySQL 与 JWT，前端使用 Vue 3 和 Vant。它需要你自行安装 MAA、ADB 和模拟器，不包含游戏账号、MaaCore 二进制文件或 MAA 资源包，也不会自动下载核心更新。
+后端使用 GoFrame、MySQL 与 JWT，前端使用 Vue 3 和 Vant。它需要你自行安装 MAA、ADB 和模拟器，不包含游戏账号、MaaCore 二进制文件或 MAA 资源包。
 
 ## 功能
 
@@ -15,19 +15,32 @@
 
 ## 界面预览
 
-以下是当前 Vue 前端的实际界面截图，使用模拟任务与日志。截图中的数据不代表真实账号，也未连接或操作游戏。
+以下是当前 Vue 前端的手机端实际截图，使用模拟任务与日志，数据不代表真实账号，也未连接或操作游戏。
 
-### 任务、日志与截图入口
+<table>
+  <tr>
+    <th>任务配置</th>
+    <th>黑流树海配置</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/images/dashboard.png" alt="手机端任务面板，展示每日收菜、肉鸽模板和六类任务开关" width="320"></td>
+    <td valign="top"><img src="docs/images/roguelike.png" alt="手机端黑流树海配置，展示刷开局模式、分队和职业组合" width="320"></td>
+  </tr>
+  <tr>
+    <th>每日定时任务</th>
+    <th>访问令牌登录</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/images/schedule.png" alt="手机端定时任务编辑，展示任务名称、模板开关和每日 08:30 执行时间" width="320"></td>
+    <td valign="top"><img src="docs/images/login.png" alt="手机端访问令牌登录表单" width="320"></td>
+  </tr>
+</table>
 
-<img src="docs/images/dashboard.jpg" alt="MAA Web 控制台主页，包含定时任务、六类任务配置、日志和截图入口" width="760">
+<details>
+  <summary>查看主页完整长图（含日志与截图入口）</summary>
 
-### 登录、肉鸽配置与定时任务
-
-<img src="docs/images/login.jpg" alt="使用私有访问令牌登录" width="760">
-
-<img src="docs/images/roguelike.jpg" alt="黑流树海主题与作战模式配置" width="760">
-
-<img src="docs/images/schedule.jpg" alt="定时任务名称、模板开关和每日执行时间设置" width="760">
+  <p><img src="docs/images/dashboard-full.png" alt="手机端主页完整长图，包含定时任务、任务配置、模拟日志和截图入口" width="360"></p>
+</details>
 
 ## 运行环境
 
@@ -206,6 +219,28 @@ scripts/               发布前的本地检查
 | HTTPS 页面没有实时日志 | 反向代理是否转发 WebSocket 的 Upgrade/Connection 头与正确的 Host |
 | 肉鸽配置正常但游戏执行失败 | 核心与资源是否匹配，模拟器首页、主题解锁和核心识别是否正常 |
 
-## 项目说明
+## Credits · 开源致谢
 
-本项目是个人开发的非官方控制台，与鹰角网络、Hypergryph 无隶属关系。MAA 核心、游戏与其他依赖的权利及许可归各自权利人。仓库尚未指定独立的开源许可证；公开源码并不自动授予任意使用、修改或分发的许可。
+感谢以下开源项目及其贡献者：
+
+| 项目 | 在本项目中的用途 | 许可证 |
+| --- | --- | --- |
+| [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) | MaaCore 任务执行引擎与 C 接口 | AGPL-3.0-only |
+| [GoFrame](https://github.com/gogf/gf) | Go 后端、数据库访问与每日任务调度 | MIT |
+| [Vue](https://github.com/vuejs/core) / [Vue Router](https://github.com/vuejs/router) | 前端界面与路由 | MIT |
+| [Vant](https://github.com/vant-ui/vant) | 移动端组件、弹窗与时间选择器 | MIT |
+| [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT 签发与校验 | MIT |
+| [Logrus](https://github.com/sirupsen/logrus) | 后端日志与日志回调 | MIT |
+| [Gorilla WebSocket](https://github.com/gorilla/websocket) | 实时日志连接 | BSD-2-Clause |
+| [Go MySQL Driver](https://github.com/go-sql-driver/mysql) | MySQL 数据库驱动 | MPL-2.0 |
+| [Android Debug Bridge](https://android.googlesource.com/platform/packages/modules/adb/) | 模拟器连接、设备控制与截图 | Apache-2.0 |
+
+完整的主要依赖、构建工具、历史依赖及外部运行组件说明见 [CREDITS.md](CREDITS.md)。第三方项目保留各自的版权与许可证。
+
+## 许可证
+
+本项目的原创代码采用 **GNU Affero General Public License v3.0 only（SPDX：`AGPL-3.0-only`）**，全文见 [LICENSE](LICENSE)。这一选择与 [MaaAssistantArknights 的上游许可声明](https://github.com/MaaAssistantArknights/MaaAssistantArknights#声明) 保持一致。
+
+修改并分发本项目时，须依照 AGPL-3.0 提供对应源代码；将修改版作为网络服务供他人使用时，也须按许可证向这些用户提供对应源代码的获取方式。具体权利、义务与免责条款以许可证全文为准。
+
+本项目是个人开发的非官方控制台，与 MAA 官方、鹰角网络、Hypergryph 无隶属关系。MAA、游戏素材、商标及其他第三方内容的权利归各自权利人，本项目的许可证不替代这些内容的原有许可。

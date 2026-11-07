@@ -62,6 +62,42 @@ func TestLoginUsesConfiguredIdentity(t *testing.T) {
 	}
 }
 
+func TestLegacyCredentialsRequireExplicitOptIn(t *testing.T) {
+	cfg := &Config{JWTSecret: "legacy-signing-fixture", Users: []User{
+		{Username: "alice", Token: "old-login"},
+	}}
+	if cfg.validate() == nil {
+		t.Fatal("short credentials accepted by default")
+	}
+	cfg.AllowLegacyCredentials = true
+	if err := cfg.validate(); err != nil {
+		t.Fatal(err)
+	}
+	oldSession, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
+		Username: "alice", RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}).SignedString([]byte(cfg.JWTSecret))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cfg.parse(oldSession); err != nil {
+		t.Fatal("existing unexpired session was rejected", err)
+	}
+	if name, ok := cfg.authenticate("old-login"); !ok || name != "alice" {
+		t.Fatal("legacy login no longer maps to its original instance")
+	}
+	cfg.JWTSecret = ""
+	if cfg.validate() == nil {
+		t.Fatal("legacy compatibility must still reject empty signing keys")
+	}
+	cfg.JWTSecret = "legacy-signing-fixture"
+	cfg.Users[0].Token = ""
+	if cfg.validate() == nil {
+		t.Fatal("legacy compatibility must still reject empty login tokens")
+	}
+}
+
 func TestJWTRejectsForgedExpiredAndUnknownIdentity(t *testing.T) {
 	cfg := testConfig()
 	for _, tc := range []struct {

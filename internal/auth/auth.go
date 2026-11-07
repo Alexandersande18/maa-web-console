@@ -21,8 +21,9 @@ type User struct {
 }
 
 type Config struct {
-	JWTSecret string `json:"jwtsecret"`
-	Users     []User `json:"users"`
+	JWTSecret              string `json:"jwtsecret"`
+	Users                  []User `json:"users"`
+	AllowLegacyCredentials bool   `json:"allowlegacycredentials"`
 }
 
 type Claims struct {
@@ -80,16 +81,22 @@ func Initialize(ctx context.Context) error {
 }
 
 func (c *Config) validate() error {
-	if len(c.JWTSecret) < 32 {
-		return fmt.Errorf("auth.jwtsecret / MAA_JWT_SECRET must contain at least 32 bytes")
+	minimumLength := 32
+	// An existing private deployment may explicitly retain its previous login
+	// credentials and signing key. Public examples keep the stronger default.
+	if c.AllowLegacyCredentials {
+		minimumLength = 1
+	}
+	if len(c.JWTSecret) < minimumLength {
+		return fmt.Errorf("auth.jwtsecret / MAA_JWT_SECRET must contain at least %d bytes", minimumLength)
 	}
 	if len(c.Users) == 0 {
 		return fmt.Errorf("configure at least one auth.users entry / MAA_LOGIN_TOKENS")
 	}
 	names, tokens := map[string]bool{}, map[string]bool{}
 	for _, user := range c.Users {
-		if strings.TrimSpace(user.Username) == "" || len(user.Token) < 32 {
-			return fmt.Errorf("each auth user needs a username and a login token of at least 32 bytes")
+		if strings.TrimSpace(user.Username) == "" || len(user.Token) < minimumLength {
+			return fmt.Errorf("each auth user needs a username and a login token of at least %d bytes", minimumLength)
 		}
 		if names[user.Username] || tokens[user.Token] || user.Token == c.JWTSecret {
 			return fmt.Errorf("auth usernames, login tokens and JWT secret must be distinct")

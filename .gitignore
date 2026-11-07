@@ -15,6 +15,7 @@
 *.local.yaml
 *.local.yml
 *.local.json
+*.local.conf
 
 # Certificates, keys, database copies, and archives
 **/certs/

@@ -27,6 +27,10 @@
 
 初始化脚本不会覆盖现有配置。现有部署可手工合并 `auth`，也可通过 `MAA_JWT_SECRET` 与 `MAA_LOGIN_TOKENS` 设置凭据。实际凭据只能保存到被忽略的本地配置、受控环境或秘密管理系统。
 
+必须沿用旧登录口令和未过期 JWT 的私有部署，可显式设置 `auth.allowlegacycredentials: true`，并把原登录映射和原签名密钥移到本地 `auth` 配置。此选项沿用旧凭据的强度，默认关闭；空凭据、重复用户及重复令牌仍会被拒绝。公开示例和新部署继续要求至少 32 字节的独立随机值。
+
+旧前端部署参数可以保存在被忽略的 `web/.env.local`、`web/deploy.local.json` 和 `web/*.local.conf` 中。开发监听参数支持 `DEV_SERVER_HOST`、`DEV_SERVER_PORT`、`DEV_SERVER_ALLOWED_HOSTS`；镜像推送脚本可从 `deploy.local.json` 的 `imageRef` / `certImageRef` 读取本机目标。Nginx 私有配置应在运行时挂载，不会被复制进公开镜像。
+
 ## Git 历史和备份
 
 历史清洗前建立了包含所有原始引用的私有 Git bundle，并验证了备份。备份位于仓库外，具体路径在本次操作的本地报告中。它仍包含原始敏感内容，只用于受控恢复，不能上传到 GitHub、Release、网盘公开链接或容器仓库。
