@@ -26,6 +26,7 @@ maa:
   tasktimeout: "2h"
   stoptimeout: "30s"
   userdir: ".runtime/maa"
+  toolboxresourcepath: "resource/maa"
   asst:
     - id: "demo"
       adbaddress: "127.0.0.1:16384"
@@ -33,6 +34,11 @@ maa:
       adbtype: "BlueStacks" # Use the connection profile supported by your MaaCore.
       resourcepath: 'C:\MAA' # Contains MaaCore.dll and resource/.
       clienttype: "Official"
+      # To enable MuMu screenshots, also set adbtype to MuMuEmulator12.
+      mumu:
+        enabled: false
+        path: 'C:\Program Files\Netease\MuMu Player 12'
+        # index: 0 # Only set for bridged networking; otherwise infer from ADB port.
 
 # Create the database and a restricted application account first.
 # Replace the placeholder before starting. Never use the root database account.

@@ -34,6 +34,38 @@
         margin-top: 5px;
         margin-bottom: 10px;
       }
+      .number-input {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 5px 0 10px;
+      }
+      .number-input input {
+        flex: 1;
+        min-width: 0;
+        width: 0;
+        height: 40px;
+        margin: 0;
+        text-align: center;
+        font-size: 16px;
+        appearance: textfield;
+      }
+      .number-input input::-webkit-inner-spin-button,
+      .number-input input::-webkit-outer-spin-button {
+        appearance: none;
+        margin: 0;
+      }
+      .number-input button {
+        flex: 0 0 40px;
+        height: 40px;
+        margin: 0;
+        padding: 0;
+        font-size: 22px;
+      }
+      .number-input button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
       /* 登录页样式 */
       #login-page {
         max-width: 500px;
@@ -193,6 +225,32 @@
       #modal-body > div {
         margin-bottom: 12px;
       }
+      .stage-guide {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid #e4e9ef;
+        border-radius: 6px;
+        background: #f7f9fc;
+        color: #374151;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .stage-guide strong {
+        color: #252e3a;
+      }
+      .stage-guide p,
+      .stage-guide ol {
+        margin: 2px 0 0;
+      }
+      .stage-guide ol {
+        padding-inline-start: 1.5em;
+        list-style: decimal;
+      }
+      .stage-guide li + li {
+        margin-top: 4px;
+      }
       /* 针对布尔类型字段的特殊处理 */
       .boolean-field {
         margin-left: 0;
@@ -289,6 +347,16 @@
             <button class="config-button">配置</button>
             <div class="config-summary"></div>
           </div>
+          <div class="task-item" data-task="taskActivity">
+            <span>活动刷取</span>
+            <button class="config-button">配置</button>
+            <div class="config-summary"></div>
+          </div>
+          <div class="task-item" data-task="taskReclamation">
+            <span>生息演算</span>
+            <button class="config-button">配置</button>
+            <div class="config-summary"></div>
+          </div>
         </div>
         <div style="text-align:center;">
           <button id="linkstart-button" style="background-color:#35dca5;">开始任务</button>
@@ -333,8 +401,8 @@
     </div>
     
   <script type="module">
-    import { TASK_TEMPLATE, FIELD_CONFIG, getFieldOptions, isTaskFieldVisible } from './task-config/taskDefinitions.js';
-    import { processTaskConfig } from './task-config/taskConfigUtils.js';
+    import { TASK_TEMPLATE, FIELD_CONFIG, getFieldOptions, getNumberFieldOptions, getReclamationStageGuide, isTaskFieldVisible } from './task-config/taskDefinitions.js';
+    import { normalizeNumberField, processTaskConfig } from './task-config/taskConfigUtils.js';
     // 全局保存 JWT token
     let jwtToken = "";
     let logStreamActive = false;
@@ -530,9 +598,7 @@
         if(input.type === "checkbox"){
           value = input.checked;
         } else if(input.type === "number"){
-          value = Number(value);
-          if (input.min !== '') value = Math.max(Number(input.min), value);
-          if (input.max !== '') value = Math.min(Number(input.max), value);
+          value = normalizeNumberField(currentTask, key, value);
         }
         if (typeof taskConfigs[currentTask][key] === 'number') value = Number(value);
         taskConfigs[currentTask][key] = value;
@@ -543,6 +609,70 @@
       taskItem.querySelector(".config-summary").textContent = JSON.stringify(taskConfigs[currentTask]);
       closeModal();
     });
+
+    function createNumberInput(task, key, input, label) {
+      const { min, max, step } = getNumberFieldOptions(task, key);
+      input.min = min;
+      input.max = max;
+      input.step = step;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'number-input';
+      const minus = document.createElement('button');
+      const plus = document.createElement('button');
+      minus.type = plus.type = 'button';
+      minus.textContent = '−';
+      plus.textContent = '+';
+      minus.setAttribute('aria-label', '减少' + label);
+      plus.setAttribute('aria-label', '增加' + label);
+      const updateButtons = () => {
+        const value = Number(input.value);
+        minus.disabled = value <= min;
+        plus.disabled = value >= max;
+      };
+      input.addEventListener('input', updateButtons);
+      input.addEventListener('change', () => {
+        input.value = normalizeNumberField(task, key, input.value);
+        updateButtons();
+      });
+      for (const [button, direction] of [[minus, -1], [plus, 1]]) {
+        button.addEventListener('click', () => {
+          input.value = normalizeNumberField(task, key, input.value);
+          input.stepUp(direction);
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      }
+      wrapper.append(minus, input, plus);
+      updateButtons();
+      return wrapper;
+    }
+
+    function createStageGuide(sections) {
+      const guide = document.createElement("aside");
+      guide.id = "reclamation-stage-guide";
+      guide.className = "stage-guide";
+      guide.setAttribute("aria-live", "polite");
+      for (const { label, text, steps } of sections) {
+        const group = document.createElement("div");
+        const heading = document.createElement("strong");
+        heading.textContent = label;
+        group.appendChild(heading);
+        if (steps) {
+          const list = document.createElement("ol");
+          for (const step of steps) {
+            const item = document.createElement("li");
+            item.textContent = step;
+            list.appendChild(item);
+          }
+          group.appendChild(list);
+        } else {
+          const paragraph = document.createElement("p");
+          paragraph.textContent = text;
+          group.appendChild(paragraph);
+        }
+        guide.appendChild(group);
+      }
+      return guide;
+    }
 
     function openConfigModal(task) {
       modalTitle.textContent = "配置 " + document.querySelector(`[data-task="${task}"] span`).textContent;
@@ -610,8 +740,6 @@
             input = document.createElement("input");
             input.type = "number";
             input.value = value;
-            if (field.min !== undefined) input.min = field.min;
-            if (field.max !== undefined) input.max = field.max;
           } else if (["facility", "buy_first", "blacklist", "select", "confirm", "first_tags"].includes(key)) {
             input = document.createElement("textarea");
             if(Array.isArray(value)){
@@ -634,20 +762,36 @@
             input.value = value;
           }
   
-          if (task === 'taskRoguelike' && ['theme', 'mode', 'blackflow_strategy', 'blackflow_start_utopia'].includes(key)) {
+          if ((task === 'taskRoguelike' && ['theme', 'mode', 'blackflow_strategy'].includes(key)) ||
+              (task === 'taskReclamation' && ['theme', 'mode'].includes(key))) {
             input.addEventListener('change', () => {
               config[key] = input.type === 'checkbox' ? input.checked : (typeof value === 'number' ? Number(input.value) : input.value);
-              if (key === 'theme') config.mode = 0;
+              if (key === 'theme') {
+                const modes = getFieldOptions(task, 'mode', config);
+                if (!Object.hasOwn(modes, config.mode)) config.mode = Number(Object.keys(modes)[0]);
+              }
               openConfigModal(task);
             });
           } else {
-            input.addEventListener('change', () => { config[key] = typeof value === 'number' ? Number(input.value) : input.value; });
+            input.addEventListener('change', () => {
+              config[key] = input.type === 'number' ? normalizeNumberField(task, key, input.value) : (typeof value === 'number' ? Number(input.value) : input.value);
+            });
           }
           input.name = key;
-          input.style.width = "100%";
+          input.id = 'config-' + key;
+          label.htmlFor = input.id;
           input.style.padding = "6px";
           div.appendChild(label);
-          div.appendChild(input);
+          div.appendChild(input.type === 'number' ? createNumberInput(task, key, input, field.label || key) : input);
+
+          if (task === 'taskReclamation' && key === 'mode') {
+            const sections = getReclamationStageGuide(config);
+            if (sections) {
+              const guide = createStageGuide(sections);
+              input.setAttribute('aria-describedby', guide.id);
+              div.appendChild(guide);
+            }
+          }
   
           if(field.hint) {
             const hint = document.createElement("div");

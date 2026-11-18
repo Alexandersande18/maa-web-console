@@ -1,6 +1,7 @@
 package maa
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -83,6 +84,20 @@ func TestNativeABI(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer m.AsstDestroy()
+	t.Run("ToolboxResourceReload", func(t *testing.T) {
+		overlay, err := filepath.Abs("../../../resource/maa")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for round := 1; round <= 2; round++ {
+			if err := loadResource(overlay); err != nil {
+				t.Fatalf("round %d: load toolbox overlay: %v", round, err)
+			}
+			if err := reloadResources(context.Background(), c.ResourcePath, c.ClientType); err != nil {
+				t.Fatalf("round %d: reload core resources after toolbox: %v", round, err)
+			}
+		}
+	})
 	task := &dto.TaskFight{Enable: true, Stage: "1-7", Times: 1, Series: 1}
 	id, err := m.AsstAppendTask(dto.Fight, task)
 	if err != nil || id <= 0 {

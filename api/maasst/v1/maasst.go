@@ -18,13 +18,8 @@ type LoginRes struct {
 }
 
 type LinkStartReq struct {
-	g.Meta        `path:"/maasst/linkstart" Tags:"maasst" method:"post" summary:"LinkStartReq"`
-	TaskRecruit   *dto.TaskRecruit   `json:"taskRecruit" v:""`
-	TaskInfrast   *dto.TaskInfrast   `json:"taskInfrast" v:""`
-	TaskFight     *dto.TaskFight     `json:"taskFight" v:""`
-	TaskRoguelike *dto.TaskRoguelike `json:"taskRoguelike" v:""`
-	TaskMall      *dto.TaskMall      `json:"taskMall" v:""`
-	TaskAward     *dto.TaskAward     `json:"taskAward" v:""`
+	g.Meta `path:"/maasst/linkstart" Tags:"maasst" method:"post" summary:"LinkStartReq"`
+	dto.TaskSelection
 }
 
 type LinkStartRes struct {
@@ -60,17 +55,12 @@ type LogsWSReq struct {
 type LogsWSRes struct{}
 
 type AddCronJobReq struct {
-	g.Meta        `path:"/maasst/cronjob" Tags:"maasst" method:"post" summary:"AddCronJobReq"`
-	TaskRecruit   *dto.TaskRecruit   `json:"taskRecruit" v:""`
-	TaskInfrast   *dto.TaskInfrast   `json:"taskInfrast" v:""`
-	TaskFight     *dto.TaskFight     `json:"taskFight" v:""`
-	TaskRoguelike *dto.TaskRoguelike `json:"taskRoguelike" v:""`
-	TaskMall      *dto.TaskMall      `json:"taskMall" v:""`
-	TaskAward     *dto.TaskAward     `json:"taskAward" v:""`
-	Hour          int                `json:"hour" v:"required|between:0,23"`
-	Minute        int                `json:"minute" v:"required|between:0,59"`
-	Name          string             `json:"name" v:"required"`
-	IsTemplate    int                `json:"isTemplate" v:""`
+	g.Meta `path:"/maasst/cronjob" Tags:"maasst" method:"post" summary:"AddCronJobReq"`
+	dto.TaskSelection
+	Hour       int    `json:"hour" v:"required|between:0,23"`
+	Minute     int    `json:"minute" v:"required|between:0,59"`
+	Name       string `json:"name" v:"required"`
+	IsTemplate int    `json:"isTemplate" v:""`
 }
 
 type AddCronJobRes struct {
@@ -86,18 +76,13 @@ type GetCronJobListRes struct {
 }
 
 type UpdateCronJobReq struct {
-	g.Meta        `path:"/maasst/cronjob" Tags:"maasst" method:"put" summary:"Update CronJob"`
-	Id            int                `json:"id" v:"required#请提供ID"`
-	TaskRecruit   *dto.TaskRecruit   `json:"taskRecruit" v:""`
-	TaskInfrast   *dto.TaskInfrast   `json:"taskInfrast" v:""`
-	TaskFight     *dto.TaskFight     `json:"taskFight" v:""`
-	TaskRoguelike *dto.TaskRoguelike `json:"taskRoguelike" v:""`
-	TaskMall      *dto.TaskMall      `json:"taskMall" v:""`
-	TaskAward     *dto.TaskAward     `json:"taskAward" v:""`
-	Hour          int                `json:"hour" v:"required|between:0,23"`
-	Minute        int                `json:"minute" v:"required|between:0,59"`
-	Name          string             `json:"name" v:""`
-	IsTemplate    int                `json:"isTemplate" v:""`
+	g.Meta `path:"/maasst/cronjob" Tags:"maasst" method:"put" summary:"Update CronJob"`
+	dto.TaskSelection
+	Id         int    `json:"id" v:"required#请提供ID"`
+	Hour       int    `json:"hour" v:"required|between:0,23"`
+	Minute     int    `json:"minute" v:"required|between:0,59"`
+	Name       string `json:"name" v:""`
+	IsTemplate int    `json:"isTemplate" v:""`
 }
 
 type UpdateCronJobRes struct{}

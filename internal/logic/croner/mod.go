@@ -36,34 +36,10 @@ func (s *sCroner) ExecCronJob(job *dto.CronJob) error {
 	// 根据任务类型执行具体操作
 	g.Log().Infof(s.ctx, "Executing job: %+v, User: %+v", job.Name, uid)
 
-	var taskList []dto.Tasker
-	taskList = append(taskList, &dto.TaskStartUp{
-		Enable:           true,
-		ClientType:       "Official",
-		StartGameEnabled: true,
-	})
-	if job.TaskRecruit != nil && job.TaskRecruit.Enable {
-		taskList = append(taskList, job.TaskRecruit)
+	taskList, err := job.TaskSelection.Build(job.IsTemplate == 0)
+	if err != nil {
+		return err
 	}
-	if job.TaskInfrast != nil && job.TaskInfrast.Enable {
-		taskList = append(taskList, job.TaskInfrast)
-	}
-	if job.TaskFight != nil && job.TaskFight.Enable {
-		taskList = append(taskList, job.TaskFight)
-	}
-	if job.TaskRoguelike != nil && job.TaskRoguelike.Enable {
-		taskList = append(taskList, job.TaskRoguelike)
-	}
-	if job.TaskMall != nil && job.TaskMall.Enable {
-		taskList = append(taskList, job.TaskMall)
-	}
-	if job.TaskAward != nil && job.TaskAward.Enable {
-		taskList = append(taskList, job.TaskAward)
-	}
-	taskList = append(taskList, &dto.TaskCloseDown{
-		Enable:     true,
-		ClientType: "Official",
-	})
 
 	if err := service.Maasst().LinkStart(uid, taskList); err != nil {
 		return err

@@ -7,11 +7,12 @@ import (
 )
 
 type Config struct {
-	HTTP        *HTTP   `yaml:"http"`
-	Asst        []*Asst `yaml:"asst"`
-	TaskTimeout string  `yaml:"tasktimeout"`
-	StopTimeout string  `yaml:"stoptimeout"`
-	UserDir     string  `yaml:"userdir"`
+	HTTP                *HTTP   `yaml:"http"`
+	Asst                []*Asst `yaml:"asst"`
+	TaskTimeout         string  `yaml:"tasktimeout"`
+	StopTimeout         string  `yaml:"stoptimeout"`
+	UserDir             string  `yaml:"userdir"`
+	ToolboxResourcePath string  `yaml:"toolboxresourcepath"`
 }
 
 type HTTP struct {
@@ -20,13 +21,22 @@ type HTTP struct {
 }
 
 type Asst struct {
-	ID           string `yaml:"id"`
-	ADBAddress   string `yaml:"adbaddress"`
-	ADBPath      string `yaml:"adbpath"`
-	ADBType      string `yaml:"adbtype"`
-	ResourcePath string `yaml:"resourcepath"`
-	UserDir      string `yaml:"userdir"`
-	ClientType   string `yaml:"clienttype"`
+	ID                  string      `yaml:"id"`
+	ADBAddress          string      `yaml:"adbaddress"`
+	ADBPath             string      `yaml:"adbpath"`
+	ADBType             string      `yaml:"adbtype"`
+	ResourcePath        string      `yaml:"resourcepath"`
+	UserDir             string      `yaml:"userdir"`
+	ClientType          string      `yaml:"clienttype"`
+	MuMu                *MuMuConfig `yaml:"mumu"`
+	ToolboxResourcePath string      `yaml:"-"`
+}
+
+// Index is omitted for ordinary ADB connections; MaaCore derives it from the port.
+type MuMuConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Path    string `yaml:"path"`
+	Index   *int   `yaml:"index"`
 }
 
 func LoadConfig() (*Config, error) {

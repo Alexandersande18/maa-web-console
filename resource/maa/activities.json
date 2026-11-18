@@ -1,0 +1,9 @@
+{
+  "spa-regulations": {
+    "name": "卫戍协议三期 · 规程",
+    "clients": ["Official", "Bilibili"],
+    "starts_at": "2026-11-08T16:00:00+08:00",
+    "navigation": "WebNav@SPA3@Begin",
+    "from_current_page": "WebNav@SPA3@FromCurrentPage"
+  }
+}

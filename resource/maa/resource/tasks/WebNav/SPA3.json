@@ -1,0 +1,72 @@
+{
+  "WebNav@SPA3@Begin": {
+    "doc": "到达卫戍协议规程主界面后交给上游刷等级奖励",
+    "algorithm": "JustReturn",
+    "sub": ["WebNav@SPA3@Navigate", "WebNav@SPA3@Ready"],
+    "next": ["MiniGame@SPA@Begin"]
+  },
+  "WebNav@SPA3@FromCurrentPage": {
+    "algorithm": "JustReturn",
+    "sub": ["WebNav@SPA3@Ready"],
+    "next": ["MiniGame@SPA@Begin"]
+  },
+  "WebNav@SPA3@Navigate": {
+    "algorithm": "JustReturn",
+    "next": [
+      "WebNav@SPA3@Ready",
+      "WebNav@SPA3@OpenOverview",
+      "WebNav@SPA3@FromTodoList",
+      "WebNav@SPA3@OpenTerminalTab",
+      "WebNav@SPA3@FromHome",
+      "WebNav@SPA3@Back"
+    ]
+  },
+  "WebNav@SPA3@Ready": {
+    "doc": "确认默认主题的极速模拟按钮与规程标题同时存在",
+    "baseTask": "MiniGame@SPA@EnterIndependentQuickly",
+    "template": "MiniGame@SPA@EnterIndependentQuickly.png",
+    "action": "DoNothing",
+    "sub": ["WebNav@SPA3@ConfirmTitle"],
+    "next": []
+  },
+  "WebNav@SPA3@ConfirmTitle": {
+    "algorithm": "OcrDetect",
+    "text": ["规程"],
+    "roi": [545, 247, 235, 62]
+  },
+  "WebNav@SPA3@OpenOverview": {
+    "algorithm": "OcrDetect",
+    "text": ["模拟开放中"],
+    "roi": [985, 505, 210, 69],
+    "action": "ClickSelf",
+    "postDelay": 900,
+    "next": ["WebNav@SPA3@Ready"]
+  },
+  "WebNav@SPA3@FromTodoList": {
+    "algorithm": "OcrDetect",
+    "text": ["卫戍协议"],
+    "roi": [1010, 97, 240, 408],
+    "action": "ClickSelf",
+    "postDelay": 900,
+    "next": ["WebNav@SPA3@Ready", "WebNav@SPA3@OpenOverview", "WebNav@SPA3@OpenTerminalTab"]
+  },
+  "WebNav@SPA3@OpenTerminalTab": {
+    "doc": "识别到终端下方的长期探索图标，再点同一栏最右侧的卫戍协议",
+    "template": "Roguelike@IntegratedStrategies.png",
+    "roi": [763, 622, 128, 98],
+    "action": "ClickRect",
+    "specificRect": [1168, 651, 36, 39],
+    "postDelay": 900,
+    "next": ["WebNav@SPA3@OpenOverview"]
+  },
+  "WebNav@SPA3@FromHome": {
+    "baseTask": "WebNav@Terminal@FromHome",
+    "template": ["SwitchTheme@ToggleSettingsMenu.png", "SwitchTheme@ToggleSettingsMenu-v2.png"],
+    "next": ["WebNav@SPA3@FromTodoList", "WebNav@SPA3@OpenTerminalTab"]
+  },
+  "WebNav@SPA3@Back": {
+    "baseTask": "WebNav@Terminal@Back",
+    "template": ["Return.png", "Return-White.png"],
+    "next": ["WebNav@SPA3@Navigate#next"]
+  }
+}

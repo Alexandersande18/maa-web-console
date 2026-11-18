@@ -24,14 +24,18 @@
             </small>
           </template>
           <template v-else>
-            <label>
+            <label :id="'config-label-' + key">
               {{ (fieldConfig[key] && fieldConfig[key].label) || key }}
             </label>
             <small v-if="fieldConfig[key] && fieldConfig[key].hint" class="hint-text">
               {{ fieldConfig[key].hint }}
             </small>
             <div v-if="getOptions(key)" class="input-wrapper">
-              <select v-model="localConfig[key]">
+              <select
+                v-model="localConfig[key]"
+                :aria-labelledby="'config-label-' + key"
+                :aria-describedby="key === 'mode' && reclamationStageGuide ? 'reclamation-stage-guide' : undefined"
+              >
                 <option
                   v-for="(optText, optValue) in getOptions(key)"
                   :key="optValue"
@@ -41,8 +45,16 @@
                 </option>
               </select>
             </div>
-            <div v-else-if="typeof value === 'number'" class="input-wrapper">
-              <input type="number" v-model.number="localConfig[key]" :min="fieldConfig[key]?.min" :max="getFieldMax(key)" @input="handleNumberInput(key)" />
+            <div v-else-if="getNumberOptions(key)" class="input-wrapper">
+              <van-stepper
+                v-model="localConfig[key]"
+                v-bind="getNumberOptions(key)"
+                :name="key"
+                :aria-labelledby="'config-label-' + key"
+                class="number-input"
+                button-size="40"
+                @blur="handleNumberInput(key)"
+              />
             </div>
             <div
               v-else-if="['facility', 'buy_first', 'blacklist', 'select', 'confirm', 'first_tags', 'start_foldartal_list', 'expected_collapsal_paradigms'].includes(key)"
@@ -56,6 +68,15 @@
             <div v-else class="input-wrapper">
               <input type="text" v-model="localConfig[key]" />
             </div>
+            <aside v-if="key === 'mode' && reclamationStageGuide" id="reclamation-stage-guide" class="stage-guide" aria-live="polite">
+              <div v-for="section in reclamationStageGuide" :key="section.label">
+                <strong>{{ section.label }}</strong>
+                <ol v-if="section.steps">
+                  <li v-for="step in section.steps" :key="step">{{ step }}</li>
+                </ol>
+                <p v-else>{{ section.text }}</p>
+              </div>
+            </aside>
           </template>
         </div>
       </div>
@@ -68,8 +89,8 @@
 </template>
 
 <script>
-import { getFieldOptions, isTaskFieldVisible } from './task-config/taskDefinitions'
-import { processTaskConfig } from './task-config/taskConfigUtils'
+import { TASK_TEMPLATE, getFieldOptions, getNumberFieldOptions, getReclamationStageGuide, isTaskFieldVisible } from './task-config/taskDefinitions'
+import { normalizeNumberField, processTaskConfig } from './task-config/taskConfigUtils'
 
 export default {
   name: 'ConfigModal',
@@ -100,13 +121,16 @@ export default {
       return result;
     },
     modalTitle() {
-      return "配置 " + this.taskKey
+      return "配置 " + (TASK_TEMPLATE[this.taskKey]?.label || this.taskKey)
+    },
+    reclamationStageGuide() {
+      return this.taskKey === 'taskReclamation' ? getReclamationStageGuide(this.localConfig) : null
     }
   },
   watch: {
     'localConfig.theme'() {
       const options = this.getOptions('mode')
-      if (options && !Object.hasOwn(options, this.localConfig.mode)) this.localConfig.mode = 0
+      if (options && !Object.hasOwn(options, this.localConfig.mode)) this.localConfig.mode = Number(Object.keys(options)[0])
     }
   },
   methods: {
@@ -116,21 +140,15 @@ export default {
     isBoolean(val) {
       return typeof val === 'boolean'
     },
-    getFieldMax(key) {
-      const cfg = this.fieldConfig[key]
-      return cfg && typeof cfg.max === 'number' ? cfg.max : null
+    getNumberOptions(key) {
+      return getNumberFieldOptions(this.taskKey, key)
     },
     handleNumberInput(key) {
-      const max = this.getFieldMax(key)
-      const min = this.fieldConfig[key]?.min
-      if (typeof min === 'number' && this.localConfig[key] < min) this.localConfig[key] = min
-      if (typeof max === 'number' && this.localConfig[key] > max) {
-        this.localConfig[key] = max
-      }
+      this.localConfig[key] = normalizeNumberField(this.taskKey, key, this.localConfig[key])
     },
     closeAndSave() {
       for (const key of Object.keys(this.localConfig)) {
-        if (typeof this.localConfig[key] === 'number') this.handleNumberInput(key)
+        if (this.getNumberOptions(key)) this.handleNumberInput(key)
       }
       try {
         processTaskConfig(this.taskKey, this.localConfig)
@@ -218,7 +236,7 @@ export default {
 }
 
 #modal-body {
-  max-height: 500px;
+  max-height: min(500px, calc(100dvh - 160px));
   overflow-y: auto;
   margin-bottom: 20px;
 }
@@ -254,8 +272,38 @@ export default {
   margin-bottom: 8px;
 }
 
+.stage-guide {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #e4e9ef;
+  border-radius: 6px;
+  background: #f7f9fc;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.stage-guide strong {
+  color: #252e3a;
+}
+
+.stage-guide p,
+.stage-guide ol {
+  margin: 2px 0 0;
+}
+
+.stage-guide ol {
+  padding-inline-start: 1.5em;
+  list-style: decimal;
+}
+
+.stage-guide li + li {
+  margin-top: 4px;
+}
+
 .input-wrapper input[type="text"],
-.input-wrapper input[type="number"],
 .input-wrapper textarea,
 .input-wrapper select {
   width: 100%;
@@ -268,7 +316,6 @@ export default {
 }
 
 .input-wrapper input[type="text"]:focus,
-.input-wrapper input[type="number"]:focus,
 .input-wrapper textarea:focus,
 .input-wrapper select:focus {
   border-color: var(--primary-color);
@@ -278,6 +325,29 @@ export default {
 
 .modal-footer {
   text-align: right;
+}
+
+.number-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.number-input :deep(.van-stepper__input) {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+  height: 40px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--white);
+  font-size: 16px;
+}
+
+.number-input :deep(button) {
+  flex-shrink: 0;
 }
 
 .save-button {

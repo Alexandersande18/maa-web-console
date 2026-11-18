@@ -13,6 +13,9 @@ import (
 )
 
 func (c *ControllerV1) AddCronJob(ctx context.Context, req *v1.AddCronJobReq) (res *v1.AddCronJobRes, err error) {
+	if _, err := req.TaskSelection.Build(req.IsTemplate == 0); err != nil {
+		return nil, err
+	}
 	uid := gconv.String(ctx.Value(middleware.CtxUsername))
 	insertId, err := dao.CronJob.Ctx(ctx).Data(do.CronJob{
 		Username: uid,
@@ -23,14 +26,16 @@ func (c *ControllerV1) AddCronJob(ctx context.Context, req *v1.AddCronJobReq) (r
 			}
 			return 1
 		}(),
-		Hour:          req.Hour,
-		Minute:        req.Minute,
-		TaskRecruit:   req.TaskRecruit,
-		TaskInfrast:   req.TaskInfrast,
-		TaskFight:     req.TaskFight,
-		TaskRoguelike: req.TaskRoguelike,
-		TaskMall:      req.TaskMall,
-		TaskAward:     req.TaskAward,
+		Hour:            req.Hour,
+		Minute:          req.Minute,
+		TaskRecruit:     req.TaskRecruit,
+		TaskInfrast:     req.TaskInfrast,
+		TaskFight:       req.TaskFight,
+		TaskRoguelike:   req.TaskRoguelike,
+		TaskMall:        req.TaskMall,
+		TaskAward:       req.TaskAward,
+		TaskActivity:    req.TaskActivity,
+		TaskReclamation: req.TaskReclamation,
 	}).InsertAndGetId()
 	if err != nil {
 		return nil, err

@@ -1,12 +1,4 @@
-import { TASK_TEMPLATE } from "./taskDefinitions.js";
-
-const TASK_KEYS_WITH_COMPLEX_SERIALIZATION = [
-  "taskRecruit",
-  "taskInfrast",
-  "taskFight",
-  "taskMall",
-  "taskRoguelike"
-];
+import { TASK_TEMPLATE, createDefaultTasks, getFieldOptions, getNumberFieldOptions } from "./taskDefinitions.js";
 
 export function formatTimestamp(timestamp) {
   if (!timestamp) return "未执行";
@@ -18,8 +10,24 @@ export function formatTimestamp(timestamp) {
   return date.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
 }
 
-export function processTaskConfig(key, config) {
+export function normalizeNumberField(taskKey, key, value) {
+  const { min, max, integer } = getNumberFieldOptions(taskKey, key);
+  let number = Number(value ?? TASK_TEMPLATE[taskKey].config[key]);
+  if (!Number.isFinite(number)) number = TASK_TEMPLATE[taskKey].config[key];
+  if (integer) number = Math.trunc(number);
+  return Math.max(min, Math.min(max, number));
+}
+
+function normalizeNumberFields(taskKey, config) {
   const cfg = { ...config };
+  for (const key of Object.keys(cfg)) {
+    if (getNumberFieldOptions(taskKey, key)) cfg[key] = normalizeNumberField(taskKey, key, cfg[key]);
+  }
+  return cfg;
+}
+
+export function processTaskConfig(key, config) {
+  const cfg = normalizeNumberFields(key, config);
   switch (key) {
     case "taskRecruit":
       if (typeof cfg.select === "string") {
@@ -59,7 +67,7 @@ export function processTaskConfig(key, config) {
       }
       break;
     case "taskFight":
-      cfg.series = Math.max(0, Math.min(10, Number(cfg.series ?? 10)));
+      cfg.series = normalizeNumberField(key, "series", cfg.series ?? 10);
       if (typeof cfg.drops === "string" && cfg.drops.trim() !== "") {
         try {
           cfg.drops = JSON.parse(cfg.drops);
@@ -86,9 +94,25 @@ export function processTaskConfig(key, config) {
         cfg.blacklist = [];
       }
       break;
+    case "taskReclamation": {
+      const modes = getFieldOptions(key, "mode", cfg);
+      if (!Object.hasOwn(modes, cfg.mode)) throw new Error("生息演算主题和模式不匹配");
+      if (cfg.theme === "Tales" && cfg.mode === 1) {
+        if (typeof cfg.tools_to_craft === "string") {
+          cfg.tools_to_craft = cfg.tools_to_craft.split(/[,，]/).map((tool) => tool.trim()).filter(Boolean);
+        }
+        if (!cfg.tools_to_craft?.length) cfg.tools_to_craft = ["荧光棒"];
+      } else {
+        delete cfg.tools_to_craft;
+        delete cfg.increment_mode;
+        delete cfg.num_craft_batches;
+      }
+      if (cfg.theme !== "Tales" || cfg.mode !== 0) delete cfg.clear_store;
+      break;
+    }
     case "taskRoguelike":
       cfg.mode = Number(cfg.mode ?? 0);
-      cfg.starts_count = Math.max(0, Math.min(3, Number(cfg.starts_count ?? 3)));
+      cfg.starts_count = normalizeNumberField(key, "starts_count", cfg.starts_count ?? 3);
       for (const key of ["blackflow_start_animals", "blackflow_start_reward_priority"]) {
         if (typeof cfg[key] === "string") {
           cfg[key] = cfg[key].split(",").map((s) => s.trim()).filter(Boolean);
@@ -160,7 +184,7 @@ export function processTaskConfig(key, config) {
 }
 
 export function reverseProcessTaskConfig(key, config) {
-  const cfg = { ...config };
+  const cfg = normalizeNumberFields(key, config);
   switch (key) {
     case "taskRecruit":
       if (Array.isArray(cfg.select)) {
@@ -202,8 +226,11 @@ export function reverseProcessTaskConfig(key, config) {
         cfg.blacklist = cfg.blacklist.join(",");
       }
       break;
+    case "taskReclamation":
+      if (Array.isArray(cfg.tools_to_craft)) cfg.tools_to_craft = cfg.tools_to_craft.join(",");
+      break;
     case "taskRoguelike":
-      cfg.starts_count = Math.max(0, Math.min(3, Number(cfg.starts_count ?? 3)));
+      cfg.starts_count = normalizeNumberField(key, "starts_count", cfg.starts_count ?? 3);
       for (const key of ["blackflow_start_animals", "blackflow_start_reward_priority"]) {
         if (Array.isArray(cfg[key])) cfg[key] = cfg[key].join(",");
       }
@@ -253,27 +280,19 @@ export function buildCronJobPayloadFromTasks(tasks) {
 }
 
 export function syncTasksFromCronJob(tasks, cronJob) {
-  const nextTasks = tasks;
-  TASK_KEYS_WITH_COMPLEX_SERIALIZATION.forEach((key) => {
-    if (!cronJob[key]) return;
-    const reversed = reverseProcessTaskConfig(key, { ...TASK_TEMPLATE[key].config, ...cronJob[key] });
-    nextTasks[key].config = { ...reversed };
-    nextTasks[key].configSummary = JSON.stringify(
-      processTaskConfig(key, { ...cronJob[key] })
-    );
-    if (cronJob[key].enable !== undefined) {
-      nextTasks[key].enable = cronJob[key].enable;
-    }
-  });
-
-  if (cronJob.taskAward) {
-    nextTasks.taskAward.config = { ...cronJob.taskAward };
-    nextTasks.taskAward.configSummary = JSON.stringify(cronJob.taskAward);
-    if (cronJob.taskAward.enable !== undefined) {
-      nextTasks.taskAward.enable = cronJob.taskAward.enable;
-    }
+  // A template is a complete selection: null/absent tasks must clear previous state.
+  const nextTasks = createDefaultTasks();
+  for (const key of Object.keys(nextTasks)) {
+    if (!cronJob[key]) continue;
+    const { enable = false, ...config } = cronJob[key];
+    const task = nextTasks[key];
+    task.config = reverseProcessTaskConfig(key, { ...task.config, ...config });
+    task.enable = enable;
+    task.configSummary = JSON.stringify(processTaskConfig(key, task.config));
   }
 
-  return nextTasks;
+  // Apply only after every configuration has been converted successfully.
+  Object.assign(tasks, nextTasks);
+  return tasks;
 }
 

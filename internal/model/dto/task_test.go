@@ -17,7 +17,11 @@ func TestTaskLimits(t *testing.T) {
 		{"fight10", TaskFight{Series: 10, Server: "CN", ClientType: "Official"}, true},
 		{"fight11", TaskFight{Series: 11, Server: "CN", ClientType: "Official"}, false},
 		{"rogue3", TaskRoguelike{Theme: "BlackFlow", Mode: 30003, StartsCount: 3}, true},
-		{"rogue4", TaskRoguelike{Theme: "BlackFlow", Mode: 30003, StartsCount: 4}, false},
+		{"rogue0", TaskRoguelike{Theme: "BlackFlow", Mode: 30003, StartsCount: 0}, true},
+		{"rogue4", TaskRoguelike{Theme: "BlackFlow", Mode: 30003, StartsCount: 4}, true},
+		{"rogue10", TaskRoguelike{Theme: "BlackFlow", Mode: 30003, StartsCount: 10}, true},
+		{"rogue11", TaskRoguelike{Theme: "BlackFlow", Mode: 30003, StartsCount: 11}, false},
+		{"rogueNegative", TaskRoguelike{Theme: "BlackFlow", Mode: 30003, StartsCount: -1}, false},
 		{"animals", TaskRoguelike{Theme: "BlackFlow", Mode: 30001, StartsCount: 3}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -30,12 +34,12 @@ func TestTaskLimits(t *testing.T) {
 }
 
 func TestRoguelikeLegacyLimitAndStartRunSerialization(t *testing.T) {
-	task := TaskRoguelike{Theme: "BlackFlow", Mode: 30003, StartsCount: 8}
+	task := TaskRoguelike{Theme: "BlackFlow", Mode: 30003, StartsCount: 18}
 	var params map[string]interface{}
 	if err := json.Unmarshal([]byte(task.Serialize()), &params); err != nil {
 		t.Fatal(err)
 	}
-	if params["starts_count"] != float64(3) || task.StartsCount != 8 {
+	if params["starts_count"] != float64(10) || task.StartsCount != 18 {
 		t.Fatal("legacy task must be capped without mutating its saved configuration", params)
 	}
 	if animals, ok := params["blackflow_start_animals"].([]interface{}); !ok || len(animals) != 0 {
@@ -43,5 +47,18 @@ func TestRoguelikeLegacyLimitAndStartRunSerialization(t *testing.T) {
 	}
 	if _, exists := params["collectible_mode_core_char_list"]; exists {
 		t.Fatal("unspecified preparation operators must preserve core-char fallback")
+	}
+}
+
+func TestRoguelikeExplorationCountsArePreserved(t *testing.T) {
+	for _, count := range []int{0, 3, 4, 8, 10} {
+		task := TaskRoguelike{Theme: "JieGarden", StartsCount: count}
+		var params map[string]interface{}
+		if err := json.Unmarshal([]byte(task.Serialize()), &params); err != nil {
+			t.Fatal(err)
+		}
+		if params["starts_count"] != float64(count) {
+			t.Fatalf("exploration count %d was changed during serialization: %v", count, params)
+		}
 	}
 }

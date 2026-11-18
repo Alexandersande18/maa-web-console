@@ -1,0 +1,15 @@
+{
+  "WebNav@Terminal@FromHome": {
+    "baseTask": "RA@Navigation-FromMainInterface",
+    "template": ["SwitchTheme@ToggleSettingsMenu.png", "SwitchTheme@ToggleSettingsMenu-v2.png"],
+    "next": []
+  },
+  "WebNav@Terminal@Back": {
+    "baseTask": "ReturnButton",
+    "template": ["Return.png", "Return-White.png"],
+    "postDelay": 600,
+    "maxTimes": 5,
+    "next": [],
+    "onErrorNext": []
+  }
+}

@@ -48,8 +48,14 @@ type Maa struct {
 }
 
 func New(cfg *Asst) (*Maa, error) {
+	if err := validateMuMuConfig(cfg); err != nil {
+		return nil, err
+	}
 	if err := initializeRuntime(cfg.ResourcePath, cfg.UserDir, cfg.ClientType); err != nil {
 		return nil, err
+	}
+	if muMuEnabled(cfg) && asstSetConnectionExtras == nil {
+		return nil, errors.New("MuMu screenshot enhancement requires MaaCore AsstSetConnectionExtras")
 	}
 	m := &Maa{cfg: cfg, SSEClients: make(map[string]*dto.SSEClientConn)}
 	m.setDefaultHook()
@@ -130,6 +136,9 @@ func (m *Maa) AsstCreate() error {
 func (m *Maa) AsstConnect(path, address, config, usrdir string) error {
 	nativeMu.Lock()
 	defer nativeMu.Unlock()
+	if err := m.configureConnectionExtras(config); err != nil {
+		return err
+	}
 	// AsstSetUserDir is global and is set once, before resource loading.
 	r, err := callStrings(asstConnect, []uintptr{m.asstHandle}, path, address, config)
 	if err != nil {
@@ -294,31 +303,40 @@ func (m *Maa) Execute(ctx context.Context, tasks []dto.Tasker) error {
 	if err := reloadResources(ctx, m.cfg.ResourcePath, m.cfg.ClientType); err != nil {
 		return err
 	}
+	batches, err := m.prepareBatches(ctx, tasks)
+	if err != nil {
+		return err
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if err := m.AsstConnect(m.cfg.ADBPath, m.cfg.ADBAddress, m.cfg.ADBType, ""); err != nil {
 		return err
 	}
+	return m.executeBatches(ctx, batches)
+}
+
+// drained reports whether the native queue finished and can accept another batch.
+func (m *Maa) executeBatch(ctx context.Context, tasks []dto.Tasker) (drained bool, err error) {
 	run := m.beginTaskRun()
 	defer m.endTaskRun(run)
 	for _, task := range tasks {
 		if err := ctx.Err(); err != nil {
-			return err
+			return false, err
 		}
 		id, err := m.AsstAppendTask(task.GetType(), task)
 		if err != nil {
-			return err
+			return false, err
 		}
 		m.mu.Lock()
 		run.ids[id] = true
 		m.mu.Unlock()
 	}
 	if err := ctx.Err(); err != nil {
-		return err
+		return false, err
 	}
 	if _, err := m.AsstStart(); err != nil {
-		return err
+		return false, err
 	}
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
@@ -326,19 +344,19 @@ func (m *Maa) Execute(ctx context.Context, tasks []dto.Tasker) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return false, ctx.Err()
 		case <-ticker.C:
 			if !m.AsstRunning() {
 				completed, err := m.taskRunResult(run)
 				if completed {
-					return err
+					return true, err
 				}
 				// AsstRunning can become false before the message thread delivers
 				// TaskChainError and AllTasksCompleted. Drain that result first.
 				if idleSince.IsZero() {
 					idleSince = time.Now()
 				} else if time.Since(idleSince) >= 5*time.Second {
-					return errors.Join(err, errors.New("MaaCore stopped without an AllTasksCompleted callback"))
+					return false, errors.Join(err, errors.New("MaaCore stopped without an AllTasksCompleted callback"))
 				}
 			} else {
 				idleSince = time.Time{}

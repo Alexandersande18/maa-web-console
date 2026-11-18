@@ -6,17 +6,20 @@ type TaskType int
 type TaskID int32
 
 const (
-	StartUp   TaskType = iota //开始唤醒
-	Fight                     //刷理智
-	Recruit                   //公开招募
-	Infrast                   //基建换班
-	Visit                     //访问好友
-	Mall                      //领取信用及商店购物。
-	Award                     //领取日常奖励
-	Roguelike                 //无限刷肉鸽
-	Copilot                   //自动抄作业
-	Depot                     //仓库识别
-	CloseDown                 //关闭游戏
+	StartUp     TaskType = iota //开始唤醒
+	Fight                       //刷理智
+	Recruit                     //公开招募
+	Infrast                     //基建换班
+	Visit                       //访问好友
+	Mall                        //领取信用及商店购物。
+	Award                       //领取日常奖励
+	Roguelike                   //无限刷肉鸽
+	Copilot                     //自动抄作业
+	Depot                       //仓库识别
+	CloseDown                   //关闭游戏
+	Custom                      // MaaCore 自定义流程
+	Reclamation                 // 生息演算
+	Activity                    // Web 活动配置，执行前解析为 Custom
 )
 
 func (t TaskType) String() string {
@@ -41,22 +44,30 @@ func (t TaskType) String() string {
 		return "Depot"
 	case CloseDown:
 		return "CloseDown"
+	case Custom:
+		return "Custom"
+	case Reclamation:
+		return "Reclamation"
+	case Activity:
+		return "Activity"
 	default:
 		return ""
 	}
 }
 
 var TaskFixed = map[string]TaskType{
-	"StartUp":   StartUp,
-	"Fight":     Fight,
-	"Recruit":   Recruit,
-	"Infrast":   Infrast,
-	"Mall":      Mall,
-	"Award":     Award,
-	"Roguelike": Roguelike,
-	"Copilot":   Copilot,
-	"Depot":     Depot,
-	"CloseDown": CloseDown,
+	"StartUp":     StartUp,
+	"Fight":       Fight,
+	"Recruit":     Recruit,
+	"Infrast":     Infrast,
+	"Mall":        Mall,
+	"Award":       Award,
+	"Roguelike":   Roguelike,
+	"Copilot":     Copilot,
+	"Depot":       Depot,
+	"CloseDown":   CloseDown,
+	"Custom":      Custom,
+	"Reclamation": Reclamation,
 }
 
 type TaskerString string
@@ -409,7 +420,7 @@ func (t *TaskAward) GetType() TaskType {
 //     "core_char": string,            // 开局干员名，可选；仅支持单个干员**中文名**，无论区服；若留空或设置为空字符串 "" 则根据练度自动选择
 //     "use_support": bool,            // 开局干员是否为助战干员，可选，默认值 false
 //     "use_nonfriend_support": bool,  // 是否可以是非好友助战干员，可选，默认值 false；仅在 use_support 为 true 时有效
-//     "starts_count": int,                // 开始探索的次数，可选，默认3，最大3；达到后自动停止任务
+//     "starts_count": int,                // 开始探索的次数，可选，默认3，最大10；达到后自动停止任务
 //     "difficulty": int,                  // 指定难度等级，可选，默认值 0；仅适用于**除 Phantom 以外**的主题；
 //                                         // 若未解锁难度，则会选择当前已解锁的最高难度
 //     "stop_at_final_boss": bool,         // 是否在第 5 层险路恶敌节点前停止任务，可选，默认值 false；仅适用于**除 Phantom 以外**的主题
@@ -460,7 +471,7 @@ type TaskRoguelike struct {
 	CoreChar                      string               `json:"core_char"                       v:""                     d:""                                  dc:"核心干员名称"`
 	UseSupport                    bool                 `json:"use_support"                     v:""                     d:"false"                              dc:"使用助战"`
 	UseNonFriendSupport           bool                 `json:"use_nonfriend_support"           v:""                     d:"false"                              dc:"允许非好友助战"`
-	StartsCount                   int                  `json:"starts_count"                    v:"min:0|max:3"          d:"3"                                  dc:"开始探索次数上限，范围0-3，达到后自动停止"`
+	StartsCount                   int                  `json:"starts_count"                    v:"min:0|max:10"         d:"3"                                  dc:"开始探索次数上限，范围0-10，达到后自动停止"`
 	Difficulty                    int                  `json:"difficulty"                     v:"min:-1"               d:"0"                                  dc:"指定难度等级，-1为不指定，未解锁时自动选择最高已解锁难度"`
 	StopAtFinalBoss               bool                 `json:"stop_at_final_boss"              v:""                     d:"false"                              dc:"最终关卡前停止"`
 	StopAtMaxLevel                bool                 `json:"stop_at_max_level"               v:""                     d:"false"                              dc:"满级后停止"`
@@ -502,8 +513,8 @@ type RoguelikeStartOper struct {
 func (t *TaskRoguelike) Serialize() string {
 	params := *t
 	// 已保存的旧定时任务也必须遵守新的探索次数上限。
-	if params.StartsCount > 3 {
-		params.StartsCount = 3
+	if params.StartsCount > 10 {
+		params.StartsCount = 10
 	}
 	if params.BlackflowStartAnimals == nil {
 		params.BlackflowStartAnimals = []string{}

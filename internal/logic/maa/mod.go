@@ -41,6 +41,13 @@ func Initialize() error {
 	if cfg.UserDir == "" {
 		cfg.UserDir = filepath.Join(".runtime", "maa")
 	}
+	if cfg.ToolboxResourcePath == "" {
+		cfg.ToolboxResourcePath = filepath.Join("resource", "maa")
+	}
+	toolboxPath, err := filepath.Abs(cfg.ToolboxResourcePath)
+	if err != nil {
+		return fmt.Errorf("maa.toolboxresourcepath: %w", err)
+	}
 	instances := make(map[string]*Maa)
 	runners := make(map[string]queueRunner)
 	devices := make(map[string]bool)
@@ -74,6 +81,7 @@ func Initialize() error {
 			return err
 		}
 		ast.UserDir = cfg.UserDir
+		ast.ToolboxResourcePath = toolboxPath
 		instance, err := New(ast)
 		if err != nil {
 			return fmt.Errorf("initialize %s: %w", ast.ID, err)
@@ -122,9 +130,28 @@ func (s *sMaasst) LinkStart(id string, tasks []dto.Tasker) error {
 		return fmt.Errorf("instance not found")
 	}
 	// Timeout cleanup must target the same game package as the queued batch.
+	batch := make([]dto.Tasker, 0, len(tasks))
 	for _, task := range tasks {
 		if task == nil {
 			return fmt.Errorf("nil task")
+		}
+		switch t := task.(type) {
+		case *dto.TaskStartUp:
+			if t.ClientType == "" {
+				configured := *t
+				configured.ClientType = m.cfg.ClientType
+				task = &configured
+			}
+		case *dto.TaskCloseDown:
+			if t.ClientType == "" {
+				configured := *t
+				configured.ClientType = m.cfg.ClientType
+				task = &configured
+			}
+		case *dto.TaskActivity:
+			if _, err := m.resolveActivity(t, time.Now()); err != nil {
+				return err
+			}
 		}
 		var params struct {
 			ClientType string `json:"client_type"`
@@ -135,8 +162,9 @@ func (s *sMaasst) LinkStart(id string, tasks []dto.Tasker) error {
 		if params.ClientType != "" && params.ClientType != m.cfg.ClientType {
 			return fmt.Errorf("task client_type %q does not match configured clienttype %q", params.ClientType, m.cfg.ClientType)
 		}
+		batch = append(batch, task)
 	}
-	return s.queue.Submit(id, tasks)
+	return s.queue.Submit(id, batch)
 }
 func (s *sMaasst) StopTask(id string) error {
 	if !s.HasInstance(id) {

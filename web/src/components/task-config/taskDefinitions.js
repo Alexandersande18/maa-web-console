@@ -129,6 +129,26 @@ export const TASK_TEMPLATE = {
       collectible_mode_core_char_list: "[]"
     },
     configSummary: ""
+  },
+  taskActivity: {
+    label: "活动刷取",
+    enable: false,
+    config: { activity_id: "spa-regulations", current_page: false },
+    configSummary: ""
+  },
+  taskReclamation: {
+    label: "生息演算",
+    enable: false,
+    config: {
+      theme: "Tales",
+      mode: 0,
+      tools_to_craft: "荧光棒",
+      increment_mode: 0,
+      num_craft_batches: 1,
+      clear_store: false,
+      current_page: false
+    },
+    configSummary: ""
   }
 };
 
@@ -197,7 +217,7 @@ export const FIELD_CONFIG = {
         SyntheticJade: "合成玉"
       }
     },
-    threshold: { label: "心情阈值" },
+    threshold: { label: "心情阈值", min: 0, max: 1, step: 0.1, integer: false },
     replenish: { label: "贸易站自动补货" },
     dorm_notstationed_enabled: { label: "启用未进驻宿舍" },
     dorm_trust_enabled: { label: "填入信赖未满干员" },
@@ -214,6 +234,7 @@ export const FIELD_CONFIG = {
     stone: { label: "最大吃石头数量" },
     times: {
       label: "执行次数",
+      min: -1,
       hint: "2147483647表示无限，刷到理智不够"
     },
     series: {
@@ -291,7 +312,7 @@ export const FIELD_CONFIG = {
     core_char: { label: "核心干员名称" },
     use_support: { label: "使用助战" },
     use_nonfriend_support: { label: "允许非好友助战" },
-    starts_count: { label: "开始探索次数上限", min: 0, max: 3, hint: "最多3次，达到后自动停止" },
+    starts_count: { label: "开始探索次数上限", min: 0, max: 10, hint: "最多10次，达到后自动停止" },
     difficulty: { label: "指定难度等级", min: -1, hint: "-1表示不指定难度；黑流树海凹实托邦需6及以上" },
     stop_at_final_boss: { label: "最终关卡前停止" },
     stop_at_max_level: { label: "满级后停止" },
@@ -361,10 +382,93 @@ export const FIELD_CONFIG = {
       label: "准备局开局干员",
       hint: 'JSON数组，例如：[{"name":"机械师","use_support":false}]；留空沿用核心干员，快速飞三层需要自己的满天赋机械师'
     }
+  },
+  taskActivity: {
+    activity_id: {
+      label: "活动",
+      options: { "spa-regulations": "卫戍协议三期 · 规程" },
+      hint: "使用卫戍协议默认主题。已有模拟进度请先在游戏中处理。"
+    },
+    current_page: {
+      label: "从当前游戏页面开始",
+      hint: "手动进入有「极速模拟」的页面后，单独手动运行。"
+    }
+  },
+  taskReclamation: {
+    theme: {
+      label: "主题",
+      options: { Tales: "沙洲遗闻", RelaunchAnchor: "重启锚点" }
+    },
+    mode: { label: "刷取模式" },
+    tools_to_craft: { label: "制造道具", hint: "用逗号分隔，留空默认荧光棒。" },
+    increment_mode: { label: "制造加量方式", options: { 0: "连点", 1: "长按" } },
+    num_craft_batches: { label: "每次最大制造轮数", min: 1, max: 2147483647 },
+    clear_store: { label: "刷完后兑换生息演算商店" },
+    current_page: {
+      label: "从当前游戏页面开始",
+      hint: "手动进入对应主题或关卡后，单独手动运行。"
+    }
   }
 };
 
+const RELAUNCH_ANCHOR_STAGES = {
+  16: {
+    name: "RA-1", tokens: 159, duration: "2 分 10 秒", operator: "无需指定干员",
+    steps: ["推进主线并通关 RA-1。"],
+    flow: "通过精耕细作、建设、交付资源和结算循环获取收益。"
+  },
+  48: {
+    name: "RA-4", tokens: 417, duration: "1 分 40 秒", operator: "维什戴尔，可使用助战",
+    steps: [
+      "推进主线并通关 RA-4。",
+      "解锁「策略筹划经营」。",
+      "使用自己的维什戴尔时，先手动配队。前五位选费用低于维什戴尔的干员，最后把维什戴尔编入第六位。确认招募后，放弃本次建设并回到开始界面。",
+      "使用助战时，确认维什戴尔出现在狙击助战首页，可优先使用挚友的助战。按上述要求编入前五位，第六位临时借用维什戴尔，确认招募再放弃建设。回到开始界面时确认前五位已保存，第六位为空。"
+    ],
+    flow: "用筹划经营提供的赤金解锁区域，再由维什戴尔击败首领。"
+  },
+  32: {
+    name: "RA-15", tokens: 500, duration: "3 分钟", operator: "圣聆初雪，可使用助战",
+    steps: [
+      "推进主线并通关 RA-15。",
+      "使用自己的圣聆初雪时，先手动配队。前五位编入任意先锋，无练度要求。最后把圣聆初雪编入第六位，保存编队后退出关卡。",
+      "使用助战时，确认圣聆初雪出现在术士助战首页，可优先使用挚友的助战。"
+    ],
+    flow: "由圣聆初雪完成击杀 60 名敌人的目标。"
+  }
+};
+
+// In-game prerequisites follow the MAA Toolbox guidance for Reclamation Algorithm.
+export function getReclamationStageGuide(config) {
+  const stage = config.theme === "RelaunchAnchor" && RELAUNCH_ANCHOR_STAGES[Number(config.mode)];
+  if (!stage) return null;
+  return [
+    { label: "收益参考", text: `每轮约 ${stage.tokens} 代币和统筹点数，耗时约 ${stage.duration}。` },
+    { label: "干员要求", text: stage.operator },
+    { label: "前置步骤", steps: stage.steps },
+    { label: "启动位置", text: `选择从当前游戏页面开始时，在大地图打开 ${stage.name}，看到右下角的「开启建设」后再启动。默认由 Web 任务定位关卡。` },
+    { label: "注意", text: "若已解锁开局携带额外物品的科技，请先拆除会提供这些物品的基地设施，例如食品供给站、饮品供给站和兽栏。" },
+    { label: "任务流程", text: stage.flow }
+  ];
+}
+
+export function getNumberFieldOptions(taskKey, key) {
+  if (typeof TASK_TEMPLATE[taskKey]?.config[key] !== "number") return null;
+  const field = FIELD_CONFIG[taskKey]?.[key] || {};
+  return {
+    min: field.min ?? 0,
+    max: field.max ?? Number.MAX_SAFE_INTEGER,
+    step: field.step ?? 1,
+    integer: field.integer ?? true
+  };
+}
+
 export function getFieldOptions(taskKey, key, config, fieldConfig = FIELD_CONFIG[taskKey]) {
+  if (taskKey === "taskReclamation" && key === "mode") {
+    return config.theme === "RelaunchAnchor"
+      ? Object.fromEntries(Object.entries(RELAUNCH_ANCHOR_STAGES).map(([mode, stage]) => [mode, stage.name]))
+      : { 0: "无存档刷点数", 1: "有存档制造刷点数" };
+  }
   if (taskKey === "taskRoguelike" && key === "mode" && config.theme === "BlackFlow") {
     return { 0: "刷奖励等级", 1: "刷源石锭", 30001: "刷襁褓动物", 30003: "刷开局" };
   }
@@ -376,6 +480,13 @@ export function getFieldOptions(taskKey, key, config, fieldConfig = FIELD_CONFIG
 }
 
 export function isTaskFieldVisible(taskKey, key, config) {
+  if (taskKey === "taskReclamation") {
+    if (key === "clear_store") return config.theme === "Tales" && Number(config.mode) === 0;
+    if (["tools_to_craft", "increment_mode", "num_craft_batches"].includes(key)) {
+      return config.theme === "Tales" && Number(config.mode) === 1;
+    }
+    return true;
+  }
   if (taskKey !== "taskRoguelike") return true;
   const blackflow = config.theme === "BlackFlow";
   const startRun = Number(config.mode) === 30003;

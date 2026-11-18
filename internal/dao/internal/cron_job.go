@@ -20,42 +20,46 @@ type CronJobDao struct {
 
 // CronJobColumns defines and stores column names for the table cron_job.
 type CronJobColumns struct {
-	Id             string // 主键ID
-	Name           string // 任务名称（唯一）
-	Username       string // 所属用户名
-	IsTemplate     string // 是否为模板任务（0-否 1-是）
-	Hour           string // 小时（0-23）
-	Minute         string // 分钟（0-59）
-	TaskRecruit    string // 公招任务配置
-	TaskInfrast    string // 基建任务配置
-	TaskFight      string // 刷理智任务配置
-	TaskRoguelike  string // 肉鸽任务配置
-	TaskMall       string // 购物任务配置
-	TaskAward      string // 领奖励任务配置
-	CreatedAt      string // 创建时间
-	UpdatedAt      string // 更新时间
-	LastExecutedAt string // 最近执行时间
-	DeletedAt      string // 软删除时间
+	Id              string // 主键ID
+	Name            string // 任务名称（唯一）
+	Username        string // 所属用户名
+	IsTemplate      string // 是否为模板任务（0-否 1-是）
+	Hour            string // 小时（0-23）
+	Minute          string // 分钟（0-59）
+	TaskRecruit     string // 公招任务配置
+	TaskInfrast     string // 基建任务配置
+	TaskFight       string // 刷理智任务配置
+	TaskRoguelike   string // 肉鸽任务配置
+	TaskMall        string // 购物任务配置
+	TaskAward       string // 领奖励任务配置
+	TaskActivity    string // 活动任务配置
+	TaskReclamation string // 生息演算配置
+	CreatedAt       string // 创建时间
+	UpdatedAt       string // 更新时间
+	LastExecutedAt  string // 最近执行时间
+	DeletedAt       string // 软删除时间
 }
 
 // cronJobColumns holds the columns for the table cron_job.
 var cronJobColumns = CronJobColumns{
-	Id:             "id",
-	Name:           "name",
-	Username:       "username",
-	IsTemplate:     "is_template",
-	Hour:           "hour",
-	Minute:         "minute",
-	TaskRecruit:    "task_recruit",
-	TaskInfrast:    "task_infrast",
-	TaskFight:      "task_fight",
-	TaskRoguelike:  "task_roguelike",
-	TaskMall:       "task_mall",
-	TaskAward:      "task_award",
-	CreatedAt:      "created_at",
-	UpdatedAt:      "updated_at",
-	LastExecutedAt: "last_executed_at",
-	DeletedAt:      "deleted_at",
+	Id:              "id",
+	Name:            "name",
+	Username:        "username",
+	IsTemplate:      "is_template",
+	Hour:            "hour",
+	Minute:          "minute",
+	TaskRecruit:     "task_recruit",
+	TaskInfrast:     "task_infrast",
+	TaskFight:       "task_fight",
+	TaskRoguelike:   "task_roguelike",
+	TaskMall:        "task_mall",
+	TaskAward:       "task_award",
+	TaskActivity:    "task_activity",
+	TaskReclamation: "task_reclamation",
+	CreatedAt:       "created_at",
+	UpdatedAt:       "updated_at",
+	LastExecutedAt:  "last_executed_at",
+	DeletedAt:       "deleted_at",
 }
 
 // NewCronJobDao creates and returns a new DAO object for table data access.

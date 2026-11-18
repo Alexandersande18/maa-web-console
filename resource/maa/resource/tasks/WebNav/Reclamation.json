@@ -1,0 +1,240 @@
+{
+  "WebNav@RA@LongTerm": {
+    "baseTask": "Roguelike@IntegratedStrategies",
+    "template": "Roguelike@IntegratedStrategies.png",
+    "postDelay": 750,
+    "next": []
+  },
+  "WebNav@RA@OpenThemes": {
+    "algorithm": "OcrDetect",
+    "text": ["生息演算"],
+    "roi": [728, 452, 225, 82],
+    "sub": ["WebNav@RA@OpenThemeList"],
+    "next": []
+  },
+  "WebNav@RA@OpenThemeList": {
+    "algorithm": "OcrDetect",
+    "text": ["查看全部主题"],
+    "roi": [1043, 458, 212, 90],
+    "action": "ClickSelf",
+    "postDelay": 650
+  },
+  "WebNav@RA@EnterTheme": {
+    "algorithm": "OcrDetect",
+    "text": ["进入主题"],
+    "roi": [1040, 592, 225, 85],
+    "action": "ClickSelf",
+    "postDelay": 900
+  },
+  "WebNav@Tales@NoSave": {
+    "algorithm": "JustReturn",
+    "sub": ["WebNav@Tales@Navigate", "WebNav@Tales@Ready", "WebNav@Tales@ExpectNewGame"]
+  },
+  "WebNav@Tales@InSave": {
+    "algorithm": "JustReturn",
+    "sub": ["WebNav@Tales@Navigate", "WebNav@Tales@Ready", "WebNav@Tales@ExpectSave"]
+  },
+  "WebNav@Tales@Navigate": {
+    "algorithm": "JustReturn",
+    "next": ["WebNav@Tales@Ready", "WebNav@Tales@Select", "WebNav@Tales@OpenThemes", "WebNav@Tales@LongTerm", "WebNav@Tales@FromHome", "WebNav@Tales@Back"]
+  },
+  "WebNav@Tales@Ready": {
+    "algorithm": "OcrDetect",
+    "text": ["沙洲遗闻"],
+    "roi": [918, 226, 216, 75]
+  },
+  "WebNav@Tales@ExpectNewGame": {
+    "baseTask": "Tales@RA@PNS-Commence",
+    "action": "DoNothing",
+    "next": []
+  },
+  "WebNav@Tales@ExpectSave": {
+    "baseTask": "Tales@RA@PIS-Resume",
+    "action": "DoNothing",
+    "next": []
+  },
+  "WebNav@Tales@Select": {
+    "algorithm": "OcrDetect",
+    "text": ["沙洲遗闻"],
+    "roi": [70, 320, 288, 116],
+    "action": "ClickSelf",
+    "postDelay": 350,
+    "sub": ["WebNav@RA@EnterTheme"],
+    "next": ["WebNav@Tales@Ready"]
+  },
+  "WebNav@Tales@OpenThemes": {
+    "baseTask": "WebNav@RA@OpenThemes",
+    "next": ["WebNav@Tales@Select"]
+  },
+  "WebNav@Tales@LongTerm": {
+    "baseTask": "WebNav@RA@LongTerm",
+    "template": "Roguelike@IntegratedStrategies.png",
+    "next": ["WebNav@Tales@OpenThemes"]
+  },
+  "WebNav@Tales@FromHome": {
+    "baseTask": "WebNav@Terminal@FromHome",
+    "template": ["SwitchTheme@ToggleSettingsMenu.png", "SwitchTheme@ToggleSettingsMenu-v2.png"],
+    "next": ["WebNav@Tales@OpenThemes", "WebNav@Tales@LongTerm"]
+  },
+  "WebNav@Tales@Back": {
+    "baseTask": "WebNav@Terminal@Back",
+    "template": ["Return.png", "Return-White.png"],
+    "next": ["WebNav@Tales@Navigate#next"]
+  },
+  "WebNav@Anchor@RA1": {
+    "algorithm": "JustReturn",
+    "sub": ["WebNav@Anchor@Navigate", "WebNav@Anchor@SeekRA1"]
+  },
+  "WebNav@Anchor@RA4": {
+    "algorithm": "JustReturn",
+    "sub": ["WebNav@Anchor@Navigate", "WebNav@Anchor@SeekRA4"]
+  },
+  "WebNav@Anchor@RA15": {
+    "algorithm": "JustReturn",
+    "sub": ["WebNav@Anchor@Navigate", "WebNav@Anchor@SeekRA15"]
+  },
+  "WebNav@Anchor@Navigate": {
+    "algorithm": "JustReturn",
+    "next": ["WebNav@Anchor@OnMap", "WebNav@Anchor@ThemeHome", "WebNav@Anchor@Select", "WebNav@Anchor@OpenThemes", "WebNav@Anchor@LongTerm", "WebNav@Anchor@FromHome", "WebNav@Anchor@Back"]
+  },
+  "WebNav@Anchor@OnMap": {
+    "algorithm": "OcrDetect",
+    "text": ["建设元件"],
+    "roi": [207, 4, 130, 32]
+  },
+  "WebNav@Anchor@ThemeHome": {
+    "algorithm": "OcrDetect",
+    "text": ["可露希尔手册"],
+    "roi": [436, 13, 156, 49],
+    "sub": ["WebNav@Anchor@OpenMap"],
+    "next": ["WebNav@Anchor@OnMap"]
+  },
+  "WebNav@Anchor@OpenMap": {
+    "algorithm": "OcrDetect",
+    "text": ["开始建设"],
+    "roi": [1048, 604, 163, 65],
+    "action": "ClickSelf",
+    "postDelay": 1200
+  },
+  "WebNav@Anchor@Select": {
+    "algorithm": "OcrDetect",
+    "text": ["重启锚点"],
+    "roi": [438, 229, 213, 91],
+    "action": "ClickSelf",
+    "postDelay": 350,
+    "sub": ["WebNav@RA@EnterTheme"],
+    "next": ["WebNav@Anchor@ThemeHome"]
+  },
+  "WebNav@Anchor@OpenThemes": {
+    "baseTask": "WebNav@RA@OpenThemes",
+    "next": ["WebNav@Anchor@Select"]
+  },
+  "WebNav@Anchor@LongTerm": {
+    "baseTask": "WebNav@RA@LongTerm",
+    "template": "Roguelike@IntegratedStrategies.png",
+    "next": ["WebNav@Anchor@OpenThemes"]
+  },
+  "WebNav@Anchor@FromHome": {
+    "baseTask": "WebNav@Terminal@FromHome",
+    "template": ["SwitchTheme@ToggleSettingsMenu.png", "SwitchTheme@ToggleSettingsMenu-v2.png"],
+    "next": ["WebNav@Anchor@OpenThemes", "WebNav@Anchor@LongTerm"]
+  },
+  "WebNav@Anchor@Back": {
+    "baseTask": "WebNav@Terminal@Back",
+    "template": ["Return.png", "Return-White.png"],
+    "next": ["WebNav@Anchor@Navigate#next"]
+  },
+  "WebNav@Anchor@ConstructionAvailable": {
+    "baseTask": "RelaunchAnchor@RA@Common-OpenConstruction",
+    "action": "DoNothing"
+  },
+  "WebNav@Anchor@StagePanel": {
+    "algorithm": "OcrDetect",
+    "text": ["RA-1", "RA1"],
+    "fullMatch": true,
+    "ocrReplace": [["\\s+", ""], ["[‐‑–—−]", "-"]],
+    "roi": [850, 46, 127, 46],
+    "sub": ["WebNav@Anchor@ConstructionAvailable"]
+  },
+  "WebNav@Anchor@MapStage": {
+    "baseTask": "WebNav@Anchor@StagePanel",
+    "roi": [0, 88, 1279, 566],
+    "action": "ClickSelf",
+    "postDelay": 750,
+    "sub": []
+  },
+  "WebNav@Anchor@SeekRA1": {
+    "algorithm": "JustReturn",
+    "next": ["WebNav@Anchor@PanelRA1", "WebNav@Anchor@ClickRA1", "WebNav@Anchor@RA1FromBase"]
+  },
+  "WebNav@Anchor@PanelRA1": {
+    "baseTask": "WebNav@Anchor@StagePanel"
+  },
+  "WebNav@Anchor@ClickRA1": {
+    "baseTask": "WebNav@Anchor@MapStage",
+    "next": ["WebNav@Anchor@PanelRA1"]
+  },
+  "WebNav@Anchor@RA1FromBase": {
+    "baseTask": "WebNav@Anchor@OnMap",
+    "action": "ClickRect",
+    "specificRect": [992, 294, 36, 24],
+    "postDelay": 750,
+    "next": ["WebNav@Anchor@PanelRA1"]
+  },
+  "WebNav@Anchor@SeekRA4": {
+    "algorithm": "JustReturn",
+    "next": ["WebNav@Anchor@PanelRA4", "WebNav@Anchor@ClickRA4", "WebNav@Anchor@PanTowardRA4"]
+  },
+  "WebNav@Anchor@PanelRA4": {
+    "baseTask": "WebNav@Anchor@StagePanel",
+    "text": ["RA-4", "RA4"]
+  },
+  "WebNav@Anchor@ClickRA4": {
+    "baseTask": "WebNav@Anchor@MapStage",
+    "text": ["RA-4", "RA4"],
+    "next": ["WebNav@Anchor@PanelRA4"]
+  },
+  "WebNav@Anchor@PanTowardRA4": {
+    "baseTask": "WebNav@Anchor@OnMap",
+    "action": "Swipe",
+    "specificRect": [925, 453, 10, 10],
+    "rectMove": [549, 453, 10, 10],
+    "postDelay": 850,
+    "next": ["WebNav@Anchor@ClickRA4", "WebNav@Anchor@RA4AfterPan"]
+  },
+  "WebNav@Anchor@RA4AfterPan": {
+    "baseTask": "WebNav@Anchor@OnMap",
+    "action": "ClickRect",
+    "specificRect": [831, 281, 31, 23],
+    "postDelay": 750,
+    "next": ["WebNav@Anchor@PanelRA4"]
+  },
+  "WebNav@Anchor@SeekRA15": {
+    "algorithm": "JustReturn",
+    "next": ["WebNav@Anchor@PanelRA15", "WebNav@Anchor@ClickRA15", "WebNav@Anchor@PanTowardRA15"]
+  },
+  "WebNav@Anchor@PanelRA15": {
+    "baseTask": "WebNav@Anchor@StagePanel",
+    "text": ["RA-15", "RA15"]
+  },
+  "WebNav@Anchor@ClickRA15": {
+    "baseTask": "WebNav@Anchor@MapStage",
+    "text": ["RA-15", "RA15"],
+    "next": ["WebNav@Anchor@PanelRA15"]
+  },
+  "WebNav@Anchor@PanTowardRA15": {
+    "baseTask": "WebNav@Anchor@OnMap",
+    "action": "Swipe",
+    "specificRect": [326, 453, 10, 10],
+    "rectMove": [679, 453, 10, 10],
+    "postDelay": 850,
+    "next": ["WebNav@Anchor@ClickRA15", "WebNav@Anchor@RA15AfterPan"]
+  },
+  "WebNav@Anchor@RA15AfterPan": {
+    "baseTask": "WebNav@Anchor@OnMap",
+    "action": "ClickRect",
+    "specificRect": [635, 446, 35, 30],
+    "postDelay": 750,
+    "next": ["WebNav@Anchor@PanelRA15"]
+  }
+}

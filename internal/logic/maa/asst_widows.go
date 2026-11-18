@@ -30,22 +30,23 @@ var createAsstFunc = func(name string, dll *syscall.DLL) (procCall, error) {
 }
 
 var (
-	loadedDLLPath      string
-	asstCreate         procCall
-	asstCreateEx       procCall
-	asstGetVersion     procCall
-	asstAppendTask     procCall
-	asstConnect        procCall
-	asstSetUserDir     procCall
-	asstSetTaskParams  procCall
-	asstLoadResource   procCall
-	asstStart          procCall
-	asstStop           procCall
-	asstRunning        procCall
-	asstDestroy        procCall
-	asstGetImage       procCall
-	asstGetTasksList   procCall
-	asstAsyncScreencap procCall
+	loadedDLLPath           string
+	asstCreate              procCall
+	asstCreateEx            procCall
+	asstGetVersion          procCall
+	asstAppendTask          procCall
+	asstConnect             procCall
+	asstSetUserDir          procCall
+	asstSetTaskParams       procCall
+	asstLoadResource        procCall
+	asstStart               procCall
+	asstStop                procCall
+	asstRunning             procCall
+	asstDestroy             procCall
+	asstGetImage            procCall
+	asstGetTasksList        procCall
+	asstAsyncScreencap      procCall
+	asstSetConnectionExtras procCall
 )
 
 func newSyscall(path string) (err error) {
@@ -85,6 +86,8 @@ func newSyscall(path string) (err error) {
 }
 
 func initFunc(dll *syscall.DLL) (err error) {
+	// Optional for older cores when emulator enhancements are not configured.
+	asstSetConnectionExtras, _ = createAsstFunc("AsstSetConnectionExtras", dll)
 	asstLoadResource, err = createAsstFunc("AsstLoadResource", dll)
 	if err != nil {
 		return

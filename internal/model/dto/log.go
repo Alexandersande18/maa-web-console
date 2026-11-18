@@ -86,6 +86,7 @@ var taskchainTranslation = map[string]string{
 	"Depot":                "仓库识别",
 	"OperBox":              "干员 box 识别",
 	"ReclamationAlgorithm": "生息演算",
+	"Reclamation":          "生息演算",
 	"Custom":               "自定义任务",
 	"SingleStep":           "单步任务",
 	"VideoRecognition":     "视频识别任务",
